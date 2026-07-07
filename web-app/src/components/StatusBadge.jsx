@@ -3,7 +3,7 @@ export function StatusBadge({ status }) {
     active: { label: '啟用', className: 'status-success' },
     inactive: { label: '停用', className: 'status-muted' },
     reported: { label: '已回報', className: 'status-success' },
-    pending: { label: '未回報', className: 'status-warning' },
+    pending: { label: '未回報', className: 'status-processing' },
     overdue: { label: '逾時未回報', className: 'status-danger' },
   };
 

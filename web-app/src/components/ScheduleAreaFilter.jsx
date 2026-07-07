@@ -15,7 +15,7 @@ export function ScheduleAreaFilter({ selectedAreas, onChange }) {
   return (
     <div className="area-filter">
       <div className="area-filter__header">
-        <span className="field-label">區域篩選（台東）</span>
+        <span className="field-label">區域篩選（高雄）</span>
         <button
           type="button"
           className="btn btn-secondary btn-sm area-filter__clear"

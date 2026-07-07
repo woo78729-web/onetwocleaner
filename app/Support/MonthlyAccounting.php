@@ -730,12 +730,12 @@ class MonthlyAccounting
                 'settlement_amount' => abs($interPartnerSettlement),
                 'direction' => $interPartnerSettlement >= 0 ? 'dongdong_to_hongyi' : 'hongyi_to_dongdong',
                 'direction_label' => $interPartnerSettlement >= 0
-                    ? '東東應補給宏逸'
-                    : '宏逸應退東東',
-                'formula_hint' => '每人分潤 − 發票帳客戶匯款 + 宏逸代墊發票稅8%；正數表示東東補差額，負數表示宏逸退還東東',
+                    ? '萬兔應補給宏逸'
+                    : '宏逸應退萬兔',
+                'formula_hint' => '每人分潤 − 發票帳客戶匯款 + 宏逸代墊發票稅8%；正數表示萬兔補差額，負數表示宏逸退還萬兔',
             ],
             'atai' => [
-                'account_label' => '東東公司帳（阿泰代管）',
+                'account_label' => '萬兔公司帳（阿泰代管）',
                 'profit_share_half' => $profitShareHalf,
                 'profit_share_settled' => $profitShareHalf,
                 'advances' => (int) $totals['atai_advance_total'],
@@ -743,7 +743,7 @@ class MonthlyAccounting
                 'employee_payment_due' => (int) ($totals['payment_to_finance_total'] ?? 0),
                 'employee_payout_due' => (int) ($totals['payout_from_finance_total'] ?? 0),
                 'inter_partner_settlement' => $interPartnerSettlement < 0 ? abs($interPartnerSettlement) : 0,
-                'inter_partner_settlement_label' => $interPartnerSettlement < 0 ? '宏逸發票帳應退東東' : null,
+                'inter_partner_settlement_label' => $interPartnerSettlement < 0 ? '宏逸發票帳應退萬兔' : null,
                 'income' => $profitShareHalf,
                 'take_home' => (int) ($totals['atai_take_home'] ?? 0),
             ],
@@ -754,7 +754,7 @@ class MonthlyAccounting
                 'customer_remittance_confirmed' => $companyTransferConfirmed,
                 'invoice_tax_hongyi_advance' => $invoiceTaxCost,
                 'inter_partner_settlement' => $interPartnerSettlement,
-                'inter_partner_settlement_label' => $interPartnerSettlement >= 0 ? '東東應給宏逸（分潤）' : '宏逸發票帳應退東東',
+                'inter_partner_settlement_label' => $interPartnerSettlement >= 0 ? '萬兔應給宏逸（分潤）' : '宏逸發票帳應退萬兔',
                 'income' => $profitShareHalf,
                 'take_home' => $profitShareHalf,
             ],

@@ -127,9 +127,8 @@ export default function LoginPage() {
           <img
             className="login-card__logo"
             src={assetUrl('/images/logo.png')}
-            alt="DONN DONN 東東冷氣專業清洗"
+            alt="ONE TWO CLEANING 萬兔專業冷氣清洗"
           />
-          <p className="login-card__brand-cn">東東冷氣專業清洗</p>
           <h1 className="login-card__title">內部員工系統</h1>
         </header>
 

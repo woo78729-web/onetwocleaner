@@ -375,7 +375,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         <div>
           <h3 className="area-availability-bar__title">{panelTitle}</h3>
           <p className="hint">
-            勾選區域（由台東市向外排序），依日期顯示各師傅該區行程與可排時段。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
+            勾選區域（依距離向外排序），依日期顯示各師傅該區行程與可排時段。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
           </p>
         </div>
         <div className="area-availability-bar__range">
@@ -421,7 +421,7 @@ export function ScheduleEmployeeAvailabilityPanel({
       </div>
 
       {!selectedAreas.length && (
-        <p className="hint employee-availability-panel__empty">請先勾選一個以上區域，例如「池上」。</p>
+        <p className="hint employee-availability-panel__empty">請先勾選一個以上區域，例如「左營」。</p>
       )}
 
       {loading && selectedAreas.length > 0 && (

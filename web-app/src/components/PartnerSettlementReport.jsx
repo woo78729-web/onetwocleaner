@@ -148,7 +148,7 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
       {interPartner && (
         <section className="card partner-settlement-hero-card">
           <div className="card-header">
-            <h2 className="card-title">合夥軋差（東東 ↔ 宏逸）</h2>
+            <h2 className="card-title">合夥軋差（萬兔 ↔ 宏逸）</h2>
             <p className="hint">
               每人分潤 {formatMoney(interPartner.profit_share_half)} 元，發票帳客戶匯款 {formatMoney(interPartner.customer_remittance_in_account)} 元
               {interPartner.invoice_tax_hongyi_advance > 0 && (
@@ -164,8 +164,8 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
             amount={interPartner.settlement_amount}
             hint={
               dongdongToHongyi
-                ? `東東公司帳應轉給宏逸 ${formatMoney(interPartner.settlement_amount)} 元`
-                : `宏逸發票帳應轉給東東 ${formatMoney(interPartner.settlement_amount)} 元`
+                ? `萬兔公司帳應轉給宏逸 ${formatMoney(interPartner.settlement_amount)} 元`
+                : `宏逸發票帳應轉給萬兔 ${formatMoney(interPartner.settlement_amount)} 元`
             }
           />
         </section>
@@ -218,12 +218,12 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
 
           <TakeHomeHero
             accountLabel={hongyi.account_label}
-            label={dongdongToHongyi ? '東東應轉給宏逸' : '宏逸應轉給東東'}
+            label={dongdongToHongyi ? '萬兔應轉給宏逸' : '宏逸應轉給萬兔'}
             amount={interPartner?.settlement_amount ?? Math.abs(hongyi.inter_partner_settlement || 0)}
             hint={
               dongdongToHongyi
-                ? '分潤大於發票帳匯款，東東公司帳應補差額給宏逸'
-                : '發票帳匯款大於分潤，宏逸應退回東東公司帳'
+                ? '分潤大於發票帳匯款，萬兔公司帳應補差額給宏逸'
+                : '發票帳匯款大於分潤，宏逸應退回萬兔公司帳'
             }
           />
 
@@ -246,7 +246,7 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
               <SettlementLine
                 label="加：宏逸代墊發票稅8%"
                 amount={interPartner.invoice_tax_hongyi_advance}
-                hint="發票稅由宏逸代墊，月底結算時由東東公司帳補給宏逸發票帳"
+                hint="發票稅由宏逸代墊，月底結算時由萬兔公司帳補給宏逸發票帳"
               />
             )}
           </div>
@@ -259,7 +259,7 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
         <div className="card-header">
           <h2 className="card-title">本月怎麼算（共同基礎）</h2>
           <p className="hint">
-            合夥分潤對半：東東公司帳（阿泰代管）＋ 宏逸發票帳（宏逸代管）。扣除公司開支後，總毛利兩人各拿一半。
+            合夥分潤對半：萬兔公司帳（阿泰代管）＋ 宏逸發票帳（宏逸代管）。扣除公司開支後，總毛利兩人各拿一半。
           </p>
         </div>
         <div className="partner-settlement-basis">

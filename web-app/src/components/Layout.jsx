@@ -228,9 +228,9 @@ export function Layout({ title, children }) {
                 <span className="mobile-menu-btn__bar" />
               </button>
             )}
-            <img className="brand-mark brand-mark--logo" src={assetUrl('/images/logo.png')} alt="東東冷氣" />
+            <img className="brand-mark brand-mark--logo" src={assetUrl('/images/logo.png')} alt="萬兔專業冷氣清洗" />
             <div className="topbar-brand__text">
-              <p className="brand-title">東東冷氣專業清洗</p>
+              <p className="brand-title">萬兔專業冷氣清洗</p>
               <p className="brand-subtitle">{title}</p>
             </div>
           </div>

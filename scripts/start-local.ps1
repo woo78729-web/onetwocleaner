@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-Write-Host "=== 東東冷氣系統 - 本機啟動 ===" -ForegroundColor Cyan
+Write-Host "=== 萬兔冷氣系統 - 本機啟動 ===" -ForegroundColor Cyan
 
 Write-Host "停止舊的 8000 連接埠程序..." -ForegroundColor Yellow
 Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue |

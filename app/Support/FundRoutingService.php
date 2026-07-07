@@ -45,7 +45,7 @@ class FundRoutingService
                 'collected_amount' => (int) $report->collected_amount,
                 'customer_paid_total' => $customerPaidTotal,
             ],
-            notes: '客戶現場付現匯入東東帳',
+            notes: '客戶現場付現匯入萬兔帳',
         );
 
         $invoiceTaxCost = (int) $report->report_invoice_tax_cost;
@@ -67,7 +67,7 @@ class FundRoutingService
                     'schedule_id' => $schedule?->id,
                     'report_invoice_tax_cost' => $invoiceTaxCost,
                 ],
-                notes: '現金案發票 8% 稅金內部應付（東東帳 → 沒菌垢帳）',
+                notes: '現金案發票 8% 稅金內部應付（萬兔帳 → 沒菌垢帳）',
             );
         }
 

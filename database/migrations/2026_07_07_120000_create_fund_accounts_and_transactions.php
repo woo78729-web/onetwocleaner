@@ -48,7 +48,7 @@ return new class extends Migration
         DB::table('fund_accounts')->insert([
             [
                 'code' => 'dongdong',
-                'name' => '東東帳',
+                'name' => '萬兔帳',
                 'manager_label' => '阿泰代收代管',
                 'is_active' => true,
                 'created_at' => $now,

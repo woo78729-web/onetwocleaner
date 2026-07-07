@@ -186,11 +186,11 @@ export default function AdminAccountingPage() {
             </span>
             {(totals.hongyi_payment || 0) >= 0 ? (
               <span className="stat-badge stat-badge--highlight stat-badge--hero">
-                東東應補宏逸 {formatMoney(totals.hongyi_payment)}
+                萬兔應補宏逸 {formatMoney(totals.hongyi_payment)}
               </span>
             ) : (
               <span className="stat-badge stat-badge--highlight stat-badge--hero">
-                宏逸應退東東 {formatMoney(Math.abs(totals.hongyi_payment))}
+                宏逸應退萬兔 {formatMoney(Math.abs(totals.hongyi_payment))}
               </span>
             )}
             <span className="stat-badge stat-badge--highlight">
@@ -460,7 +460,7 @@ export default function AdminAccountingPage() {
               <h2 className="card-title">員工績效細項</h2>
               <p className="hint">
                 依單價統計台數（1500／1300／1000）。師傅實拿 = 客戶總額 − 公司抽成（1500→600、1300→500、1000→400）− 發票稅8% − 賠償 + 車馬費加給。
-                「應向師傅收」= 現場應繳 + 賠償入公司，方便東東對帳。
+                「應向師傅收」= 現場應繳 + 賠償入公司，方便萬兔對帳。
               </p>
             </div>
             <div className="table-wrap">

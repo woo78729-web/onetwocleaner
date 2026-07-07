@@ -118,7 +118,7 @@ export default function AdminPerformancePage() {
       {
         key: 'this',
         label: `${yoy.this_year}年`,
-        color: '#ff8c00',
+        color: '#0096c7',
         points: (yoy.month_labels || []).map((label, index) => ({
           label,
           value: metricData.this_year?.[index] || 0,

@@ -635,7 +635,7 @@ export function ScheduleFormModal({
           </div>
 
           <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <span className="field-label">服務區域（台東）</span>
+            <span className="field-label">服務區域（高雄）</span>
             <div className="option-chip-group" role="radiogroup" aria-label="服務區域">
               {TAITUNG_SERVICE_AREAS.map((area) => (
                 <button

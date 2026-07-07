@@ -2,7 +2,7 @@ $ErrorActionPreference = "Continue"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-Write-Host "=== Dong Dong AC - Office Server ===" -ForegroundColor Cyan
+Write-Host "=== 萬兔冷氣 - Office Server ===" -ForegroundColor Cyan
 
 Write-Host "Stopping process on port 8000..." -ForegroundColor Yellow
 try {

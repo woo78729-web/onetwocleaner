@@ -18,7 +18,7 @@ function linePath(points) {
 
 export function PerformanceLineChart({ title, seriesList, width = 720, height = 260 }) {
   const padding = 36;
-  const colors = ['#ff8c00', '#42a5f5', '#66bb6a', '#ef5350'];
+  const colors = ['#0096c7', '#42a5f5', '#66bb6a', '#ef5350'];
 
   if (!seriesList?.length) {
     return (
