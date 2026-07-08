@@ -7,6 +7,7 @@ import { CalendarMiniMonth } from '../components/CalendarMiniMonth';
 import { CalendarSettingsPanel } from '../components/CalendarSettingsPanel';
 import { ScheduleEmployeeAvailabilityPanel } from '../components/ScheduleEmployeeAvailabilityPanel';
 import { ScheduleAreaFilter } from '../components/ScheduleAreaFilter';
+import { ServiceAreaPicker } from '../components/ServiceAreaPicker';
 import { PageAlert } from '../components/PageAlert';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import { ScheduleFormModal } from '../components/ScheduleFormModal';
@@ -582,6 +583,7 @@ export default function AdminSchedulesPage() {
           )}
 
           {isMobile && (
+            <>
             <div className="schedule-mobile-toolbar" aria-label="派班快捷功能">
               <div className="schedule-mobile-toolbar__actions">
                 <button
@@ -618,6 +620,24 @@ export default function AdminSchedulesPage() {
                 +
               </button>
             </div>
+
+            <div className="schedule-mobile-region-bar">
+              <p className="schedule-mobile-region-bar__hint">
+                請先點選縣市（高雄／屏東／台南），再勾選區域，例如「左營」或「屏東市」。
+              </p>
+              <ServiceAreaPicker
+                mode="multiple"
+                selectedValues={selectedAreas}
+                onChange={setSelectedAreas}
+                showClear={false}
+                className="service-area-picker--mobile-inline"
+              />
+            </div>
+
+            <div className="schedule-mobile-employee-bar">
+              {renderEmployeeStrip()}
+            </div>
+            </>
           )}
 
           <div className={`schedule-layout${isDesktop ? ' schedule-layout--calendar-large' : ''}`}>
@@ -686,7 +706,7 @@ export default function AdminSchedulesPage() {
                     ×
                   </button>
                 </div>
-                <div className="schedule-mobile-sheet__body schedule-sidebar">
+                <div className="schedule-mobile-sheet__body schedule-mobile-filter-panel">
                   {renderScheduleFilterPanel()}
                 </div>
               </aside>

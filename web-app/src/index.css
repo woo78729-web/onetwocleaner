@@ -1072,7 +1072,7 @@ select option {
 .employee-avatar__initials {
   font-size: 12px;
   font-weight: 800;
-  color: var(--brand-300);
+  color: var(--tech-navy);
 }
 
 .accounting-summary {
@@ -1399,6 +1399,16 @@ select option {
   .topbar-actions {
     flex-shrink: 0;
     gap: 6px;
+  }
+
+  .topbar-actions .role-chip {
+    display: none;
+  }
+
+  .topbar .btn-glass.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-height: 36px;
   }
 
   .main-nav {
