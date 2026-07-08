@@ -8,4 +8,5 @@ export const CLOTHING_SIZE_OPTIONS = [
   { value: '2XL', label: '2XL' },
   { value: '3XL', label: '3XL' },
   { value: '4XL', label: '4XL' },
+  { value: '5XL', label: '5XL' },
 ];
