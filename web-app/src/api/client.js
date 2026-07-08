@@ -544,5 +544,9 @@ class AcCleaningApi {
   }
 }
 
+export function hasStoredAuthToken() {
+  return Boolean(readStoredToken());
+}
+
 export const api = new AcCleaningApi();
 export { ApiError };

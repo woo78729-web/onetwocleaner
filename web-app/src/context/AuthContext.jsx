@@ -1,12 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, hasStoredAuthToken } from '../api/client';
 
 const AuthContext = createContext(null);
 const AUTH_BOOT_TIMEOUT_MS = 15000;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => hasStoredAuthToken());
   const [error, setError] = useState('');
   const userRef = useRef(null);
 

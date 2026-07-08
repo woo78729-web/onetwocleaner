@@ -5,12 +5,56 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" /></noscript>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>萬兔專業冷氣清洗</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #eef4fb;
+        font-family: Inter, "Microsoft JhengHei", "Segoe UI", sans-serif;
+      }
+      .app-boot {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px 16px;
+        color: #3d4f60;
+      }
+      .app-boot__card {
+        width: min(100%, 320px);
+        padding: 28px 24px;
+        text-align: center;
+        border-radius: 20px;
+        background: #ffffff;
+        border: 1px solid rgba(16, 42, 67, 0.12);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      }
+      .app-boot__title {
+        margin: 0 0 8px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #102a43;
+      }
+      .app-boot__hint {
+        margin: 0;
+        font-size: 14px;
+        color: #3d4f60;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-boot" aria-live="polite">
+        <div class="app-boot__card">
+          <p class="app-boot__title">萬兔專業冷氣清洗</p>
+          <p class="app-boot__hint">系統載入中...</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
