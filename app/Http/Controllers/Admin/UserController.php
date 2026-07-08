@@ -57,19 +57,39 @@ class UserController extends Controller
             'google_email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'google_email')->whereNull('deleted_at')],
         ]);
 
-        $user = User::query()->create([
-            'account' => trim($validated['account']),
+        $account = trim($validated['account']);
+        $googleEmail = isset($validated['google_email']) ? strtolower(trim($validated['google_email'])) : null;
+
+        $payload = [
+            'account' => $account,
             'password' => $validated['password'],
             'name' => $validated['name'],
             'phone' => $validated['phone'] ?? null,
             'bank_account' => $validated['bank_account'] ?? null,
             'clothing_size' => $validated['clothing_size'] ?? null,
-            'google_email' => isset($validated['google_email']) ? strtolower(trim($validated['google_email'])) : null,
+            'google_email' => $googleEmail,
             'role' => $validated['role'],
             'is_active' => true,
             'rules_accepted_at' => $validated['role'] === 'employee' ? null : now(),
             'must_change_password' => $validated['role'] === 'employee',
-        ]);
+        ];
+
+        $trashed = User::onlyTrashed()->where('account', $account)->first();
+
+        if ($trashed) {
+            $trashed->restore();
+            $trashed->fill($payload);
+            $trashed->save();
+            $trashed->tokens()->delete();
+
+            return $this->success(
+                $this->staffPayload($trashed),
+                '人員帳號已重新建立（沿用原紀錄與歷史班表）',
+                201
+            );
+        }
+
+        $user = User::query()->create($payload);
 
         return $this->success($this->staffPayload($user), '人員帳號建立成功', 201);
     }

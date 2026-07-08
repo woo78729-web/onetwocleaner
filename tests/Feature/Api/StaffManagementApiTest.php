@@ -115,6 +115,42 @@ class StaffManagementApiTest extends TestCase
             ->assertJsonPath('message', '指定的使用者不是有效員工');
     }
 
+    public function test_admin_can_recreate_staff_with_same_account_after_soft_delete(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => now()->toDateString(),
+        ]));
+
+        $this->deleteJson('/api/admin/users/'.$this->employee->id)
+            ->assertOk();
+
+        $this->postJson('/api/admin/users', [
+            'account' => 'emp1',
+            'password' => 'newpass123',
+            'name' => '員工回鍋',
+            'role' => 'employee',
+            'phone' => '0911222333',
+        ])->assertCreated()
+            ->assertJsonPath('data.account', 'emp1')
+            ->assertJsonPath('data.name', '員工回鍋')
+            ->assertJsonPath('data.id', $this->employee->id);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $this->employee->id,
+            'account' => 'emp1',
+            'name' => '員工回鍋',
+            'deleted_at' => null,
+        ]);
+
+        $this->assertDatabaseHas('daily_schedules', [
+            'id' => $schedule->id,
+            'user_id' => $this->employee->id,
+        ]);
+    }
+
     public function test_employee_can_update_own_password(): void
     {
         Sanctum::actingAs($this->employee);
