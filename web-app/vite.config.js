@@ -14,6 +14,8 @@ export default defineConfig({
             return undefined;
           }
 
+          // 僅拆離登入頁完全不需要的超大型套件。
+          // 不要手動拆 react / date-fns / react-big-calendar，避免 chunk 依賴錯位拖慢首屏。
           if (id.includes('xlsx')) {
             return 'xlsx-vendor';
           }
@@ -22,22 +24,7 @@ export default defineConfig({
             return 'html2canvas-vendor';
           }
 
-          if (
-            id.includes('react-big-calendar')
-            || id.includes('date-fns')
-          ) {
-            return 'calendar-vendor';
-          }
-
-          if (
-            id.includes('react-dom')
-            || id.includes('react-router')
-            || id.includes('/react/')
-          ) {
-            return 'react-vendor';
-          }
-
-          return 'vendor';
+          return undefined;
         },
       },
     },

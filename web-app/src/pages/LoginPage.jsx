@@ -69,12 +69,8 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="login-screen">
-        <div className="login-screen__backdrop" aria-hidden="true">
-          <div className="login-screen__photo login-screen__photo--left" />
-          <div className="login-screen__photo login-screen__photo--right" />
-          <div className="login-screen__overlay" />
-        </div>
+      <div className="login-screen login-screen--boot">
+        <div className="login-screen__backdrop login-screen__backdrop--plain" aria-hidden="true" />
         <div className="login-card auth-loading-card">
           <p className="hint">正在連線...</p>
         </div>

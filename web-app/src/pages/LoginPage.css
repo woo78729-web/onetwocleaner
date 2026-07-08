@@ -34,6 +34,17 @@
   display: none;
 }
 
+.login-screen__backdrop--plain {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(0, 191, 255, 0.22) 0%, transparent 36%),
+    radial-gradient(circle at 82% 78%, rgba(16, 42, 67, 0.14) 0%, transparent 40%),
+    linear-gradient(165deg, #f8fbff 0%, #eef5ff 45%, #e8f2ff 100%);
+}
+
+.login-screen--boot .login-screen__photo {
+  display: none;
+}
+
 .login-screen__overlay {
   position: absolute;
   inset: 0;
