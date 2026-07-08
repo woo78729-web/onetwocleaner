@@ -133,6 +133,10 @@ a {
 
 .page-error-boundary__card {
   width: min(100%, 520px);
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: var(--text);
 }
 
 .page-error-boundary__message {
@@ -144,6 +148,11 @@ a {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.page-error-boundary__card .btn {
+  margin-right: 8px;
+  margin-top: 4px;
 }
 
 .app-shell {
@@ -2212,6 +2221,12 @@ select option {
   min-width: min(100%, 320px);
   padding: 28px 24px;
   text-align: center;
+  background: #ffffff;
+  border: 1px solid rgba(16, 42, 67, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .phone-link {

@@ -181,6 +181,8 @@ function AvailabilityDayBoard({
         {rows.map((employee) => {
           const rowKey = buildSelectionKey(day.date, employee.id);
           const isSelected = selectedKey === rowKey;
+          const openSlots = employee.open_slots || [];
+          const jobs = employee.jobs || [];
 
           return (
             <div
@@ -200,7 +202,7 @@ function AvailabilityDayBoard({
                   <span className="availability-day-board__tag is-leave">休假</span>
                 )}
 
-                {!employee.on_leave && employee.open_slots.map((slot) => (
+                {!employee.on_leave && openSlots.map((slot) => (
                   <button
                     key={`${employee.id}-${slot.period}-${slot.from}`}
                     type="button"
@@ -222,17 +224,17 @@ function AvailabilityDayBoard({
                   </button>
                 ))}
 
-                {!employee.on_leave && employee.open_slots.length === 0 && employee.jobs.length > 0 && (
+                {!employee.on_leave && openSlots.length === 0 && jobs.length > 0 && (
                   <span className="availability-day-board__tag is-busy">已滿</span>
                 )}
 
-                {!employee.on_leave && employee.open_slots.length === 0 && employee.jobs.length === 0 && (
+                {!employee.on_leave && openSlots.length === 0 && jobs.length === 0 && (
                   <span className="availability-day-board__tag is-open">全天可排</span>
                 )}
               </div>
 
               <div className="availability-day-board__jobs">
-                {employee.jobs.length > 0 ? employee.jobs.map((job) => (
+                {jobs.length > 0 ? jobs.map((job) => (
                   <p key={job.id} className="availability-day-board__job">{formatJobLine(job)}</p>
                 )) : (
                   <p className="hint availability-day-board__job availability-day-board__job--empty">尚無已排行程</p>
@@ -320,7 +322,7 @@ export function ScheduleEmployeeAvailabilityPanel({
       return;
     }
 
-    const firstDay = availability.days.find((day) => filterDisplayableEmployees(day.employees).length > 0);
+    const firstDay = availability.days.find((day) => filterDisplayableEmployees(day.employees || []).length > 0);
 
     if (!firstDay) {
       return;
@@ -434,7 +436,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         isDesktop ? (
           <div className="employee-availability-panel__days">
             {availability.days.map((day) => {
-              const rows = filterDisplayableEmployees(day.employees);
+              const rows = filterDisplayableEmployees(day.employees || []);
 
               if (rows.length === 0) {
                 return null;
@@ -466,7 +468,7 @@ export function ScheduleEmployeeAvailabilityPanel({
           <>
             <div className="employee-availability-panel__days employee-availability-panel__days--mobile-list">
               {availability.days.map((day) => {
-                const visibleEmployees = filterDisplayableEmployees(day.employees);
+                const visibleEmployees = filterDisplayableEmployees(day.employees || []);
 
                 if (visibleEmployees.length === 0) {
                   return null;

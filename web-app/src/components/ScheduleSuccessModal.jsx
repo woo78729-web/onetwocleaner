@@ -53,6 +53,16 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       setCapturing(true);
 
       try {
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(resolve);
+          });
+        });
+
+        if (cancelled || !modalRef.current) {
+          return;
+        }
+
         const success = await captureElementAsPng(modalRef.current, {
           filename: buildScheduleSuccessScreenshotName(summary),
         });
@@ -69,7 +79,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
           setCapturing(false);
         }
       }
-    }, 350);
+    }, 900);
 
     return () => {
       cancelled = true;

@@ -3433,19 +3433,21 @@
   justify-items: center;
   padding: 16px;
   padding-bottom: calc(16px + var(--safe-bottom, 0px));
+  background: rgba(16, 42, 67, 0.42);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .schedule-success-modal {
   width: min(420px, calc(100vw - 32px));
   padding: 24px 22px calc(20px + var(--safe-bottom, 0px));
   border-radius: var(--radius-lg);
-  background: var(--glass-bg-strong);
+  background: #ffffff;
   color: var(--text);
-  border: 1px solid var(--glass-border-edge);
-  border-top: 1px solid var(--glass-border-edge-top);
-  box-shadow: var(--shadow-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(16, 42, 67, 0.12);
+  box-shadow: 0 16px 48px rgba(16, 42, 67, 0.18);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   text-align: center;
 }
 

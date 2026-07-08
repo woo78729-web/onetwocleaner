@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PageErrorBoundary } from '../components/PageErrorBoundary';
 import { Layout } from '../components/Layout';
 import { CalendarMiniMonth } from '../components/CalendarMiniMonth';
@@ -54,6 +54,7 @@ function getInitialDisplayDays(settings) {
 
 export default function AdminSchedulesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const userRole = user?.role || 'admin';
   const isMobile = useIsMobile();
@@ -539,7 +540,7 @@ export default function AdminSchedulesPage() {
   }
 
   return (
-    <PageErrorBoundary title="派班行事曆載入失敗">
+    <PageErrorBoundary title="派班行事曆載入失敗" resetKey={location.pathname}>
       <Layout title="派班行事曆">
         <section className={`card schedule-page-card${isMobile ? ' schedule-page-card--mobile-full' : ''}`}>
           {!isMobile && (
