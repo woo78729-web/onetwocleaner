@@ -5,10 +5,10 @@ import {
   AVAILABILITY_DAY_PRESETS,
   buildAreaFilterParam,
   saveAvailabilityDays,
-  sortAreasByRoute,
 } from '../utils/taitungAreas';
 import { formatChineseTimeValue, formatScheduleDateLabel } from '../utils/scheduleCalendar';
 import { EmployeeDayScheduleSidebar } from './EmployeeDayScheduleSidebar';
+import { ServiceAreaPicker } from './ServiceAreaPicker';
 
 function formatJobLine(job) {
   const start = formatChineseTimeValue(job.start_time);
@@ -284,8 +284,6 @@ export function ScheduleEmployeeAvailabilityPanel({
   const [availability, setAvailability] = useState(null);
   const [selectedKey, setSelectedKey] = useState('');
 
-  const sortedAreas = useMemo(() => sortAreasByRoute(), []);
-
   const loadAvailability = useCallback(async () => {
     if (!selectedAreas.length) {
       setAvailability(null);
@@ -335,15 +333,9 @@ export function ScheduleEmployeeAvailabilityPanel({
     }
   }, [availability, selectedKey]);
 
-  function toggleArea(areaValue) {
+  function handleSelectedAreasChange(nextAreas) {
     setSelectedKey('');
-
-    if (selectedAreas.includes(areaValue)) {
-      onSelectedAreasChange(selectedAreas.filter((value) => value !== areaValue));
-      return;
-    }
-
-    onSelectedAreasChange([...selectedAreas, areaValue]);
+    onSelectedAreasChange(nextAreas);
   }
 
   function handlePresetDays(days) {
@@ -377,7 +369,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         <div>
           <h3 className="area-availability-bar__title">{panelTitle}</h3>
           <p className="hint">
-            勾選區域（依距離向外排序），依日期顯示各師傅該區行程與可排時段。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
+            勾選縣市後展開區域，依日期顯示各師傅該區行程與可排時段。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
           </p>
         </div>
         <div className="area-availability-bar__range">
@@ -408,22 +400,14 @@ export function ScheduleEmployeeAvailabilityPanel({
         </div>
       </div>
 
-      <div className="availability-area-grid" role="group" aria-label="勾選區域">
-        {sortedAreas.map((area) => (
-          <button
-            key={area.value}
-            type="button"
-            className={`availability-area-tile${selectedAreas.includes(area.value) ? ' is-active' : ''}`}
-            aria-pressed={selectedAreas.includes(area.value)}
-            onClick={() => toggleArea(area.value)}
-          >
-            {area.label}
-          </button>
-        ))}
-      </div>
+      <ServiceAreaPicker
+        mode="multiple"
+        selectedValues={selectedAreas}
+        onChange={handleSelectedAreasChange}
+      />
 
       {!selectedAreas.length && (
-        <p className="hint employee-availability-panel__empty">請先勾選一個以上區域，例如「左營」。</p>
+        <p className="hint employee-availability-panel__empty">請先點選縣市（高雄／屏東／台南），再勾選區域，例如「左營」或「屏東市」。</p>
       )}
 
       {loading && selectedAreas.length > 0 && (

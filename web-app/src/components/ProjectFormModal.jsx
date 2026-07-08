@@ -12,7 +12,7 @@ import {
   PROJECT_STATUS_LABELS,
   resolveMailContactFields,
 } from '../utils/scheduleCalendar';
-import { TAITUNG_SERVICE_AREAS } from '../utils/taitungAreas';
+import { ServiceAreaPicker } from './ServiceAreaPicker';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { GoogleMapsLink } from './GoogleMapsLink';
 import './schedule-calendar.css';
@@ -270,19 +270,15 @@ export function ProjectFormModal({
           </label>
 
           <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <span className="field-label">服務區域（高雄）</span>
-            <div className="option-chip-group">
-              {TAITUNG_SERVICE_AREAS.map((area) => (
-                <button
-                  key={area.value}
-                  type="button"
-                  className={`option-chip option-chip--area${form.service_area === area.value ? ' is-active' : ''}`}
-                  onClick={() => handleChange({ service_area: area.value })}
-                >
-                  {area.label}
-                </button>
-              ))}
-            </div>
+            <span className="field-label">服務區域</span>
+            <ServiceAreaPicker
+              mode="single"
+              selectedValues={form.service_area}
+              onChange={(value) => handleChange({ service_area: value || '' })}
+              showClear={false}
+              gridClassName="option-chip-group"
+              tileClassName="option-chip option-chip--area"
+            />
           </div>
 
           <div className="field" style={{ gridColumn: '1 / -1' }}>

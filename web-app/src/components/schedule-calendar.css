@@ -2694,6 +2694,92 @@
   box-shadow: 0 8px 18px rgba(0, 123, 255, 0.22);
 }
 
+.service-area-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.service-area-picker__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.service-area-picker__regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.service-area-picker__region {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 42, 67, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tech-navy);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.service-area-picker__region:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 123, 255, 0.35);
+  background: rgba(0, 123, 255, 0.08);
+}
+
+.service-area-picker__region.is-expanded,
+.service-area-picker__region.has-selected {
+  border-color: rgba(0, 191, 255, 0.55);
+  background: var(--btn-primary-gradient);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.22);
+}
+
+.service-area-picker__region-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.service-area-picker__districts {
+  margin-top: 2px;
+}
+
+.schedule-sidebar .service-area-picker__region,
+.area-availability-bar .service-area-picker__region {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(16, 42, 67, 0.35);
+}
+
+.schedule-sidebar .service-area-picker__region.is-expanded,
+.schedule-sidebar .service-area-picker__region.has-selected,
+.area-availability-bar .service-area-picker__region.is-expanded,
+.area-availability-bar .service-area-picker__region.has-selected {
+  background: rgba(0, 123, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
+.schedule-sidebar .service-area-picker__region-count,
+.area-availability-bar .service-area-picker__region-count {
+  background: rgba(255, 255, 255, 0.24);
+}
+
 .availability-day-board {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);

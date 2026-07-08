@@ -22,7 +22,7 @@ import {
   CUSTOMER_SOURCE_OPTIONS,
   SCHEDULE_TIME_OPTIONS,
 } from '../utils/scheduleCalendar';
-import { TAITUNG_SERVICE_AREAS } from '../utils/taitungAreas';
+import { ServiceAreaPicker } from './ServiceAreaPicker';
 import { canManageSchedulePricing } from '../utils/permissions';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -635,21 +635,15 @@ export function ScheduleFormModal({
           </div>
 
           <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <span className="field-label">服務區域（高雄）</span>
-            <div className="option-chip-group" role="radiogroup" aria-label="服務區域">
-              {TAITUNG_SERVICE_AREAS.map((area) => (
-                <button
-                  key={area.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.service_area === area.value}
-                  className={`option-chip option-chip--area${form.service_area === area.value ? ' is-active' : ''}`}
-                  onClick={() => handleChange({ service_area: area.value })}
-                >
-                  {area.label}
-                </button>
-              ))}
-            </div>
+            <span className="field-label">服務區域</span>
+            <ServiceAreaPicker
+              mode="single"
+              selectedValues={form.service_area}
+              onChange={(value) => handleChange({ service_area: value || '' })}
+              showClear={false}
+              gridClassName="option-chip-group"
+              tileClassName="option-chip option-chip--area"
+            />
           </div>
 
           <div className="form-options-row" style={{ gridColumn: '1 / -1' }}>
