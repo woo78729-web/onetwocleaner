@@ -15,6 +15,7 @@ import {
 import { ServiceAreaPicker } from './ServiceAreaPicker';
 import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { GoogleMapsLink } from './GoogleMapsLink';
+import { DatePicker } from './DatePicker';
 import './schedule-calendar.css';
 
 function toggleEmployeeSelection(selectedIds, employeeId) {
@@ -194,25 +195,23 @@ export function ProjectFormModal({
 
           <label className="field">
             <span className="field-label">工期開始</span>
-            <input
-              className="field-control"
-              type="date"
+            <DatePicker
               min={getMinScheduleWorkDate(userRole)}
               value={form.planned_start_date}
               onChange={(event) => handleChange({ planned_start_date: event.target.value })}
               required
+              aria-label="工期開始"
             />
           </label>
 
           <label className="field">
             <span className="field-label">工期結束</span>
-            <input
-              className="field-control"
-              type="date"
+            <DatePicker
               min={form.planned_start_date || getMinScheduleWorkDate(userRole)}
               value={form.planned_end_date}
               onChange={(event) => handleChange({ planned_end_date: event.target.value })}
               required
+              aria-label="工期結束"
             />
           </label>
 

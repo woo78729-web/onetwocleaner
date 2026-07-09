@@ -23,6 +23,8 @@ export function loadCalendarSettings() {
       ...DEFAULT_CALENDAR_SETTINGS,
       ...parsed,
       displayDays: Math.min(7, Math.max(1, Number(parsed.displayDays) || DEFAULT_CALENDAR_SETTINGS.displayDays)),
+      // Always Monday — ignore any previously saved Sunday preference.
+      weekStartsOn: 1,
     };
 
     if (merged.startHour === 7 && merged.endHour === 21) {
@@ -37,6 +39,10 @@ export function loadCalendarSettings() {
     if (merged.endHour <= merged.startHour) {
       merged.startHour = DEFAULT_CALENDAR_SETTINGS.startHour;
       merged.endHour = DEFAULT_CALENDAR_SETTINGS.endHour;
+    }
+
+    if (Number(parsed.weekStartsOn) !== 1) {
+      saveCalendarSettings(merged);
     }
 
     return merged;
@@ -56,7 +62,10 @@ function clampHour(value, min, max) {
 }
 
 export function saveCalendarSettings(settings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...settings,
+    weekStartsOn: 1,
+  }));
 }
 
 export function hourToCalendarDate(hour) {

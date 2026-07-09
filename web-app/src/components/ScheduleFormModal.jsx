@@ -31,6 +31,7 @@ import { AddressAutocompleteInput } from './AddressAutocompleteInput';
 import { CustomerWashHistory } from './CustomerWashHistory';
 import { EmployeeDayScheduleSidebar } from './EmployeeDayScheduleSidebar';
 import { InvoiceTaxIdFields } from './InvoiceTaxIdFields';
+import { DatePicker } from './DatePicker';
 import './schedule-calendar.css';
 
 function updateForm(onChange, form, partial) {
@@ -357,13 +358,12 @@ export function ScheduleFormModal({
 
           <label className="field schedule-form-modal__date-field">
             <span className="field-label">預約日期</span>
-            <input
-              className="field-control"
-              type="date"
+            <DatePicker
               value={form.work_date}
               min={getMinScheduleWorkDate(userRole)}
               onChange={(e) => handleChange({ work_date: e.target.value })}
               required
+              aria-label="預約日期"
             />
           </label>
 
@@ -718,12 +718,11 @@ export function ScheduleFormModal({
                   {form.invoice_pre_issue && (
                     <label className="field">
                       <span className="field-label">預計開發票日期</span>
-                      <input
-                        className="field-control"
-                        type="date"
+                      <DatePicker
                         value={form.invoice_planned_date || ''}
                         onChange={(e) => handleChange({ invoice_planned_date: e.target.value })}
                         required
+                        aria-label="預計開發票日期"
                       />
                     </label>
                   )}
@@ -751,12 +750,11 @@ export function ScheduleFormModal({
                   {form.invoice_pre_issue && (
                     <label className="field">
                       <span className="field-label">預計開發票日期</span>
-                      <input
-                        className="field-control"
-                        type="date"
+                      <DatePicker
                         value={form.invoice_planned_date || ''}
                         onChange={(e) => handleChange({ invoice_planned_date: e.target.value })}
                         required
+                        aria-label="預計開發票日期"
                       />
                     </label>
                   )}

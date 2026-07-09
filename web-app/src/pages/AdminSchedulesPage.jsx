@@ -502,7 +502,7 @@ export default function AdminSchedulesPage() {
           displayDays={displayDays}
           onRangeChange={handleMiniRangeChange}
           schedules={schedules}
-          weekStartsOn={calendarSettings.weekStartsOn}
+          weekStartsOn={1}
         />
 
         <div className="schedule-sidebar__actions">

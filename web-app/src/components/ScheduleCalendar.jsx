@@ -233,9 +233,9 @@ export function ScheduleCalendar({
 
   const localizer = useMemo(
 
-    () => createLocalizer(settings.weekStartsOn),
+    () => createLocalizer(1),
 
-    [settings.weekStartsOn],
+    [],
 
   );
 

@@ -84,18 +84,6 @@ export function CalendarSettingsPanel({
             </label>
 
             <label className="field">
-              <span className="field-label">週起始日</span>
-              <select
-                className="field-control"
-                value={settings.weekStartsOn}
-                onChange={(event) => update({ weekStartsOn: Number(event.target.value) })}
-              >
-                <option value={0}>週日</option>
-                <option value={1}>週一</option>
-              </select>
-            </label>
-
-            <label className="field">
               <span className="field-label">顯示開始時間</span>
               <select
                 className="field-control"

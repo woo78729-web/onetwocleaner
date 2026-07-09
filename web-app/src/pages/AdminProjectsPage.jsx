@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { PageAlert } from '../components/PageAlert';
 import { PageErrorBoundary } from '../components/PageErrorBoundary';
 import { emptyProjectForm, ProjectFormModal, ProjectStatusBadge } from '../components/ProjectFormModal';
+import { DatePicker } from '../components/DatePicker';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import {
@@ -644,7 +645,12 @@ export default function AdminProjectsPage() {
                 </label>
                 <label className="field">
                   <span className="field-label">補洗日期</span>
-                  <input className="field-control" type="date" value={supplementForm.work_date} onChange={(event) => setSupplementForm({ ...supplementForm, work_date: event.target.value })} required />
+                  <DatePicker
+                    value={supplementForm.work_date}
+                    onChange={(event) => setSupplementForm({ ...supplementForm, work_date: event.target.value })}
+                    required
+                    aria-label="補洗日期"
+                  />
                 </label>
                 <label className="field">
                   <span className="field-label">台數</span>
