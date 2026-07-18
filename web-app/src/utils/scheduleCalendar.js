@@ -608,9 +608,14 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
     synced,
   );
   const serviceAddresses = normalizeServiceAddresses(synced);
+  const addressUnits = serviceAddresses.reduce((total, row) => total + (Number(row.ac_units) || 0), 0);
+  const pricingUnits = Number(pricing.ac_units) || Number(synced.ac_units) || 0;
   const acUnits = serviceAddresses.length > 1
-    ? serviceAddresses.reduce((total, row) => total + (Number(row.ac_units) || 0), 0)
-    : Number(pricing.ac_units) || Number(synced.ac_units) || 0;
+    ? (addressUnits || pricingUnits)
+    : (pricingUnits || addressUnits || 1);
+  const cleaningPrice = Number(pricing.cleaning_price)
+    || Number(synced.cleaning_price)
+    || 0;
 
   return {
     mode,
@@ -622,7 +627,8 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
     customer_phone: synced.customer_phone,
     employee_name: employee?.name || '未指定',
     ac_units: acUnits,
-    cleaning_price: Number(pricing.cleaning_price) || 0,
+    cleaning_price: cleaningPrice,
+    unit_price: Number(pricing.unit_price) || Number(synced.unit_price) || 1500,
     pricing_lines: pricing.pricing_lines,
   };
 }
@@ -1195,6 +1201,26 @@ export function formatScheduleAcUnits(schedule) {
 export function formatScheduleTotalPrice(schedule) {
   const total = getSchedulePlannedPrice(schedule);
   return total ? `${total} 元` : '-';
+}
+
+export function formatSuccessSummaryAcUnits(summary) {
+  const units = Number(summary?.ac_units);
+
+  if (Number.isFinite(units) && units > 0) {
+    return `${units} 台`;
+  }
+
+  return formatScheduleAcUnits(summary);
+}
+
+export function formatSuccessSummaryTotalPrice(summary) {
+  const stored = Number(summary?.cleaning_price);
+
+  if (Number.isFinite(stored) && stored > 0) {
+    return `${stored} 元`;
+  }
+
+  return formatScheduleTotalPrice(summary);
 }
 
 export function formatScheduleMailInvoiceSummary(schedule) {

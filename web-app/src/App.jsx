@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { EmployeeOnboardingRoute } from './components/EmployeeOnboardingRoute';
 import LoginPage from './pages/LoginPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
+import { RemittanceAlertHost } from './components/RemittanceAlertHost';
 
 const AdminReportsPage = lazy(() => import('./pages/AdminReportsPage'));
 const AdminAccountingPage = lazy(() => import('./pages/AdminAccountingPage'));
@@ -41,6 +42,7 @@ export default function App() {
     <AppErrorBoundary>
       <AuthProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/spa'}>
+          <RemittanceAlertHost />
           <Suspense fallback={<RouteLoadingScreen />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

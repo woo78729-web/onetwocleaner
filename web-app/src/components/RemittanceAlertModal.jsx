@@ -8,6 +8,7 @@ export function RemittanceAlertModal({
   open,
   items = [],
   onClose,
+  dismissing = false,
 }) {
   if (!open || !items.length) {
     return null;
@@ -21,7 +22,7 @@ export function RemittanceAlertModal({
             <h2 className="modal-title">匯款催繳提醒</h2>
             <p className="hint">以下案件已超過兩週未確認入帳，請聯絡客戶催繳。</p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="關閉">×</button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="關閉" disabled={dismissing}>×</button>
         </div>
 
         <div className="table-wrap">
@@ -53,8 +54,8 @@ export function RemittanceAlertModal({
           <Link to="/admin/remittance-tracking" className="btn btn-primary btn-pill" onClick={onClose}>
             前往匯款追查
           </Link>
-          <button type="button" className="btn btn-secondary btn-pill" onClick={onClose}>
-            我知道了
+          <button type="button" className="btn btn-secondary btn-pill" onClick={onClose} disabled={dismissing}>
+            {dismissing ? '處理中...' : '我知道了'}
           </button>
         </div>
       </div>

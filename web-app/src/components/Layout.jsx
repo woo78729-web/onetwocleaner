@@ -3,8 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../utils/assetUrl';
 import { getMobileTabItems, getNavStructure } from '../utils/navItems';
-import { canAccess, getRoleLabel } from '../utils/permissions';
-import { RemittanceAlertModal } from './RemittanceAlertModal';
+import { getRoleLabel } from '../utils/permissions';
 import { UnitChangeAlertModal } from './UnitChangeAlertModal';
 import { api } from '../api/client';
 
@@ -124,35 +123,13 @@ export function Layout({ title, children }) {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [openNavGroup, setOpenNavGroup] = useState(null);
-  const [remittanceAlerts, setRemittanceAlerts] = useState([]);
-  const [remittanceAlertOpen, setRemittanceAlertOpen] = useState(false);
   const [unitChangeAlerts, setUnitChangeAlerts] = useState([]);
   const [unitChangeAlertOpen, setUnitChangeAlertOpen] = useState(false);
   const [dismissingUnitAlerts, setDismissingUnitAlerts] = useState(false);
 
   const navStructure = user ? getNavStructure(user) : [];
   const mobileTabItems = user ? getMobileTabItems(user) : [];
-  const canTrackRemittance = user ? canAccess(user, 'remittance.track') : false;
   const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    if (!user || !canTrackRemittance) {
-      setRemittanceAlerts([]);
-      setRemittanceAlertOpen(false);
-      return;
-    }
-
-    api.getRemittanceAlerts()
-      .then((result) => {
-        const items = result.data?.items || [];
-        setRemittanceAlerts(items);
-        setRemittanceAlertOpen(items.length > 0);
-      })
-      .catch(() => {
-        setRemittanceAlerts([]);
-        setRemittanceAlertOpen(false);
-      });
-  }, [user, canTrackRemittance]);
 
   useEffect(() => {
     if (!user || !isAdmin) {
@@ -262,12 +239,6 @@ export function Layout({ title, children }) {
         )}
 
         <main className="page-content">{children}</main>
-
-        <RemittanceAlertModal
-          open={remittanceAlertOpen}
-          items={remittanceAlerts}
-          onClose={() => setRemittanceAlertOpen(false)}
-        />
 
         <UnitChangeAlertModal
           open={unitChangeAlertOpen}

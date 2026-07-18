@@ -59,6 +59,7 @@ class RemittanceTrackingController extends Controller
             ->orderBy('created_at')
             ->get()
             ->filter(fn (CompanyRemittance $item) => CompanyRemittanceSupport::isOverdue($item))
+            ->unique(fn (CompanyRemittance $item) => CompanyRemittanceSupport::alertDedupeKey($item))
             ->map(fn (CompanyRemittance $item) => CompanyRemittanceSupport::payload($item))
             ->values();
 
@@ -74,14 +75,24 @@ class RemittanceTrackingController extends Controller
             return $this->error('此筆匯款已入帳', 422);
         }
 
-        $remittance->status = CompanyRemittance::STATUS_REMINDED;
-        $remittance->reminded_at = now();
-        $remittance->save();
+        CompanyRemittanceSupport::dismissAlerts([$remittance->id]);
 
         return $this->success(
             CompanyRemittanceSupport::payload($remittance->fresh()),
             '已標記催繳，一週後若仍未入帳會再次提醒'
         );
+    }
+
+    public function dismissAlerts(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'remittance_ids' => ['required', 'array', 'min:1'],
+            'remittance_ids.*' => ['integer', 'exists:company_remittances,id'],
+        ]);
+
+        CompanyRemittanceSupport::dismissAlerts($validated['remittance_ids']);
+
+        return $this->success(null, '匯款提醒已暫停一週');
     }
 
     public function confirm(CompanyRemittance $remittance): JsonResponse

@@ -1665,24 +1665,24 @@
 
   .schedule-success-modal {
     width: min(380px, calc(100vw - 32px));
-    max-height: min(72vh, 480px);
+    max-height: min(88vh, 640px);
     overflow: auto;
     padding: 20px 16px calc(16px + var(--safe-bottom, 0px));
     border-radius: 16px;
   }
 
   .schedule-success-modal__row {
-    grid-template-columns: 1fr;
-    gap: 4px;
-    padding: 12px 0;
+    grid-template-columns: 72px 1fr;
+    gap: 10px;
+    padding: 10px 0;
   }
 
   .schedule-success-modal__row dt {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .schedule-success-modal__row dd {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .schedule-form-modal .service-address-row__grid,
@@ -3772,6 +3772,21 @@
   font-weight: 600;
   line-height: 1.45;
   word-break: break-word;
+}
+
+.schedule-success-modal__row--emphasis {
+  background: rgba(0, 123, 255, 0.06);
+  margin: 0 -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 10px;
+  border-bottom-color: transparent;
+}
+
+.schedule-success-modal__row--emphasis dd {
+  color: var(--brand-700);
+  font-size: 17px;
+  font-weight: 800;
 }
 
 .schedule-success-modal__hint {

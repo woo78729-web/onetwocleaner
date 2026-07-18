@@ -7,6 +7,10 @@ function prepareElementForCapture(element) {
   element.style.boxShadow = '0 12px 40px rgba(10, 37, 64, 0.12)';
   element.style.backdropFilter = 'none';
   element.style.webkitBackdropFilter = 'none';
+  // Avoid mobile max-height clipping 清洗台數 / 金額 in the downloaded screenshot.
+  element.style.maxHeight = 'none';
+  element.style.overflow = 'visible';
+  element.style.height = 'auto';
 
   element.querySelectorAll('.schedule-success-modal__actions, .schedule-success-modal__hint').forEach((node) => {
     node.style.display = 'none';

@@ -8,6 +8,7 @@ use App\Models\DailyReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class CompanyRemittanceSupport
 {
@@ -376,19 +377,46 @@ class CompanyRemittanceSupport
         return $remittance->created_at?->copy()->startOfDay();
     }
 
+    public static function isAlertSnoozed(CompanyRemittance $remittance): bool
+    {
+        if (! Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+            return false;
+        }
+
+        return $remittance->alert_snooze_until !== null
+            && $remittance->alert_snooze_until->isFuture();
+    }
+
+    public static function snoozeAlertUntil(CompanyRemittance $remittance, ?Carbon $until = null): void
+    {
+        if (! Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+            return;
+        }
+
+        $remittance->alert_snooze_until = $until ?? now()->addDays(self::REMIND_SNOOZE_DAYS);
+        $remittance->save();
+    }
+
     public static function isOverdue(CompanyRemittance $remittance): bool
     {
         if ($remittance->status === CompanyRemittance::STATUS_CONFIRMED) {
             return false;
         }
 
-        $now = now();
+        if (self::isAlertSnoozed($remittance)) {
+            return false;
+        }
+
+        $now = now()->copy()->startOfDay();
 
         if ($remittance->status === CompanyRemittance::STATUS_REMINDED) {
-            $anchor = $remittance->reminded_at ?? self::expectedRemittanceAnchor($remittance);
+            if ($remittance->reminded_at === null) {
+                return false;
+            }
 
-            return $anchor !== null
-                && $anchor->copy()->addDays(self::REMIND_SNOOZE_DAYS)->lte($now);
+            $anchor = $remittance->reminded_at->copy()->startOfDay();
+
+            return $anchor->copy()->addDays(self::REMIND_SNOOZE_DAYS)->lte($now);
         }
 
         $anchor = self::expectedRemittanceAnchor($remittance);
@@ -402,23 +430,246 @@ class CompanyRemittanceSupport
      */
     public static function overdueQuery(): Builder
     {
+        self::prepareAlertRemittances();
+        self::healDuplicateOverdueRemittances();
+        self::healMissingRemindedAt();
+        self::healRecentRemindedSnooze();
+
         $now = now();
         $pendingCutoff = $now->copy()->subDays(self::OVERDUE_DAYS)->toDateString();
-        $remindedCutoff = $now->copy()->subDays(self::REMIND_SNOOZE_DAYS);
+        $remindedCutoff = $now->copy()->subDays(self::REMIND_SNOOZE_DAYS)->startOfDay();
 
-        return CompanyRemittance::query()
+        $query = CompanyRemittance::query()
             ->with([
                 'report.dailySchedule.user:id,name,account',
-            ])
-            ->where(function (Builder $query) use ($pendingCutoff, $remindedCutoff) {
-                $query->where(function (Builder $pending) use ($pendingCutoff) {
-                    $pending->where('status', CompanyRemittance::STATUS_PENDING)
-                        ->whereRaw('COALESCE(expected_remittance_date, date(created_at)) <= ?', [$pendingCutoff]);
-                })->orWhere(function (Builder $reminded) use ($remindedCutoff) {
-                    $reminded->where('status', CompanyRemittance::STATUS_REMINDED)
-                        ->where('reminded_at', '<=', $remindedCutoff);
-                });
+            ]);
+
+        if (Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+            $query->where(function (Builder $builder) {
+                $builder->whereNull('alert_snooze_until')
+                    ->orWhere('alert_snooze_until', '<=', now());
             });
+        }
+
+        return $query->where(function (Builder $builder) use ($pendingCutoff, $remindedCutoff) {
+            $builder->where(function (Builder $pending) use ($pendingCutoff) {
+                $pending->where('status', CompanyRemittance::STATUS_PENDING)
+                    ->whereRaw('COALESCE(expected_remittance_date, date(created_at)) <= ?', [$pendingCutoff]);
+            })->orWhere(function (Builder $reminded) use ($remindedCutoff) {
+                $reminded->where('status', CompanyRemittance::STATUS_REMINDED)
+                    ->whereNotNull('reminded_at')
+                    ->where('reminded_at', '<=', $remindedCutoff);
+            });
+        });
+    }
+
+    public static function prepareAlertRemittances(): void
+    {
+        $projectIds = CompanyRemittance::query()
+            ->where('status', '!=', CompanyRemittance::STATUS_CONFIRMED)
+            ->get()
+            ->map(function (CompanyRemittance $remittance) {
+                if ($remittance->cleaning_project_id) {
+                    return (int) $remittance->cleaning_project_id;
+                }
+
+                $remittance->loadMissing('report.dailySchedule');
+
+                return (int) ($remittance->report?->dailySchedule?->cleaning_project_id ?? 0);
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($projectIds->isEmpty()) {
+            return;
+        }
+
+        CleaningProject::query()
+            ->whereIn('id', $projectIds)
+            ->where('expects_company_remittance', true)
+            ->get()
+            ->each(function (CleaningProject $project) {
+                self::syncForProject($project);
+                self::dedupeProjectRemittances($project);
+            });
+    }
+
+    /**
+     * @param  list<int>|array<int, int>  $remittanceIds
+     * @return list<int>
+     */
+    public static function expandRemittanceIdsForAlertAction(array $remittanceIds): array
+    {
+        $expanded = collect($remittanceIds);
+
+        CompanyRemittance::query()
+            ->whereIn('id', $remittanceIds)
+            ->with(['report.dailySchedule'])
+            ->get()
+            ->each(function (CompanyRemittance $seed) use (&$expanded) {
+                $projectId = (int) ($seed->cleaning_project_id
+                    ?: $seed->report?->dailySchedule?->cleaning_project_id
+                    ?: 0);
+
+                if ($projectId <= 0) {
+                    return;
+                }
+
+                $reportIds = DailyReport::query()
+                    ->whereHas('dailySchedule', fn (Builder $query) => $query->where('cleaning_project_id', $projectId))
+                    ->pluck('id');
+
+                $siblingIds = CompanyRemittance::query()
+                    ->where('status', '!=', CompanyRemittance::STATUS_CONFIRMED)
+                    ->where(function (Builder $query) use ($projectId, $reportIds) {
+                        $query->where('cleaning_project_id', $projectId);
+
+                        if ($reportIds->isNotEmpty()) {
+                            $query->orWhereIn('report_id', $reportIds);
+                        }
+                    })
+                    ->pluck('id');
+
+                $expanded = $expanded->merge($siblingIds);
+            });
+
+        return $expanded->unique()->map(fn ($id) => (int) $id)->values()->all();
+    }
+
+    public static function healDuplicateOverdueRemittances(): void
+    {
+        CompanyRemittance::query()
+            ->with(['report.dailySchedule'])
+            ->whereNull('cleaning_project_id')
+            ->whereHas('report.dailySchedule', fn (Builder $query) => $query->whereNotNull('cleaning_project_id'))
+            ->get()
+            ->each(function (CompanyRemittance $orphan) {
+                $projectId = $orphan->report?->dailySchedule?->cleaning_project_id;
+
+                if (! $projectId) {
+                    return;
+                }
+
+                $hasProjectRow = CompanyRemittance::query()
+                    ->where('cleaning_project_id', $projectId)
+                    ->exists();
+
+                if ($hasProjectRow) {
+                    $orphan->delete();
+                }
+            });
+
+        $projectIds = CompanyRemittance::query()
+            ->whereNotNull('cleaning_project_id')
+            ->distinct()
+            ->pluck('cleaning_project_id');
+
+        foreach ($projectIds as $projectId) {
+            $project = CleaningProject::query()->find($projectId);
+
+            if (! $project) {
+                continue;
+            }
+
+            $rowCount = CompanyRemittance::query()
+                ->where('cleaning_project_id', $projectId)
+                ->count();
+
+            if ($rowCount <= 1) {
+                continue;
+            }
+
+            if (self::hasActiveSplitGroup($project)) {
+                continue;
+            }
+
+            self::dedupeProjectRemittances($project);
+        }
+    }
+
+    public static function alertDedupeKey(CompanyRemittance $remittance): string
+    {
+        if ($remittance->cleaning_project_id) {
+            return 'project:'.$remittance->cleaning_project_id;
+        }
+
+        return 'report:'.$remittance->report_id;
+    }
+
+    public static function healMissingRemindedAt(): void
+    {
+        $payload = ['reminded_at' => now()];
+
+        if (Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+            $payload['alert_snooze_until'] = now()->addDays(self::REMIND_SNOOZE_DAYS);
+        }
+
+        CompanyRemittance::query()
+            ->where('status', CompanyRemittance::STATUS_REMINDED)
+            ->whereNull('reminded_at')
+            ->update($payload);
+    }
+
+    public static function healRecentRemindedSnooze(): void
+    {
+        if (! Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+            return;
+        }
+
+        $recentCutoff = now()->subDays(self::REMIND_SNOOZE_DAYS);
+
+        CompanyRemittance::query()
+            ->where('status', CompanyRemittance::STATUS_REMINDED)
+            ->whereNotNull('reminded_at')
+            ->where('reminded_at', '>=', $recentCutoff)
+            ->where(function (Builder $query) {
+                $query->whereNull('alert_snooze_until')
+                    ->orWhere('alert_snooze_until', '<', now());
+            })
+            ->get()
+            ->each(function (CompanyRemittance $remittance) {
+                $remittance->alert_snooze_until = $remittance->reminded_at
+                    ->copy()
+                    ->addDays(self::REMIND_SNOOZE_DAYS);
+                $remittance->save();
+            });
+    }
+
+    /**
+     * @param  list<int>|array<int, int>  $remittanceIds
+     */
+    public static function dismissAlerts(array $remittanceIds): int
+    {
+        $remittanceIds = self::expandRemittanceIdsForAlertAction($remittanceIds);
+
+        if ($remittanceIds === []) {
+            return 0;
+        }
+
+        $snoozeUntil = now()->addDays(self::REMIND_SNOOZE_DAYS);
+        $updated = 0;
+
+        CompanyRemittance::query()
+            ->whereIn('id', $remittanceIds)
+            ->where('status', '!=', CompanyRemittance::STATUS_CONFIRMED)
+            ->get()
+            ->each(function (CompanyRemittance $remittance) use ($snoozeUntil, &$updated) {
+                if ($remittance->status !== CompanyRemittance::STATUS_REMINDED) {
+                    $remittance->status = CompanyRemittance::STATUS_REMINDED;
+                }
+
+                $remittance->reminded_at = now();
+
+                if (Schema::hasColumn('company_remittances', 'alert_snooze_until')) {
+                    $remittance->alert_snooze_until = $snoozeUntil;
+                }
+
+                $remittance->save();
+                $updated++;
+            });
+
+        return $updated;
     }
 
     public static function statusLabel(string $status): string
@@ -476,6 +727,7 @@ class CompanyRemittanceSupport
             'is_overdue' => self::isOverdue($remittance),
             'expected_remittance_date' => $remittance->expected_remittance_date?->format('Y-m-d'),
             'reminded_at' => $remittance->reminded_at?->toDateTimeString(),
+            'alert_snooze_until' => $remittance->alert_snooze_until?->toDateTimeString(),
             'confirmed_at' => $remittance->confirmed_at?->toDateTimeString(),
             'created_at' => $remittance->created_at?->toDateTimeString(),
             'work_date' => $isProjectTotal

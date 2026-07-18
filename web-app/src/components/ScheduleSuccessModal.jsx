@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { captureElementAsPng } from '../utils/captureElement';
 import {
   buildScheduleSuccessScreenshotName,
-  formatScheduleAcUnits,
   formatScheduleSuccessDateTime,
-  formatScheduleTotalPrice,
+  formatSuccessSummaryAcUnits,
+  formatSuccessSummaryTotalPrice,
 } from '../utils/scheduleCalendar';
 import './schedule-calendar.css';
 
@@ -121,6 +121,14 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
             <dt>清洗人</dt>
             <dd>{summary.employee_name || '未指定'}</dd>
           </div>
+          <div className="schedule-success-modal__row schedule-success-modal__row--emphasis">
+            <dt>清洗台數</dt>
+            <dd>{formatSuccessSummaryAcUnits(summary)}</dd>
+          </div>
+          <div className="schedule-success-modal__row schedule-success-modal__row--emphasis">
+            <dt>金額</dt>
+            <dd>{formatSuccessSummaryTotalPrice(summary)}</dd>
+          </div>
           <div className="schedule-success-modal__row">
             <dt>清洗地址</dt>
             <dd>{summary.customer_address || '-'}</dd>
@@ -128,14 +136,6 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
           <div className="schedule-success-modal__row">
             <dt>客戶電話</dt>
             <dd>{summary.customer_phone || '-'}</dd>
-          </div>
-          <div className="schedule-success-modal__row">
-            <dt>清洗台數</dt>
-            <dd>{formatScheduleAcUnits(summary)}</dd>
-          </div>
-          <div className="schedule-success-modal__row">
-            <dt>金額</dt>
-            <dd>{formatScheduleTotalPrice(summary)}</dd>
           </div>
         </dl>
 
