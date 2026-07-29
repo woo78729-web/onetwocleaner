@@ -3,7 +3,7 @@ import {
   SERVICE_AREA_REGIONS,
   findRegionKeyForValues,
   sortAreasByRoute,
-} from '../utils/taitungAreas';
+} from '../utils/serviceAreas';
 
 function normalizeSelectedValues(selectedValues, mode) {
   if (mode === 'single') {

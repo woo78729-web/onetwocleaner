@@ -5,7 +5,7 @@ import {
   AVAILABILITY_DAY_PRESETS,
   buildAreaFilterParam,
   saveAvailabilityDays,
-} from '../utils/taitungAreas';
+} from '../utils/serviceAreas';
 import { formatChineseTimeValue, formatScheduleDateLabel } from '../utils/scheduleCalendar';
 import { EmployeeDayScheduleSidebar } from './EmployeeDayScheduleSidebar';
 import { ServiceAreaPicker } from './ServiceAreaPicker';

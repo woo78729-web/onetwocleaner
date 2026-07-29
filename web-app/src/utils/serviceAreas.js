@@ -75,10 +75,6 @@ export function getServiceAreaRegion(value) {
   return ALL_SERVICE_AREAS.find((area) => area.value === value)?.region ?? null;
 }
 
-export function getRegionByKey(key) {
-  return SERVICE_AREA_REGIONS.find((region) => region.key === key) ?? null;
-}
-
 export function findRegionKeyForValues(values = []) {
   const first = values.find(Boolean);
 

@@ -19,7 +19,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
-import { loadAvailabilityDays } from '../utils/taitungAreas';
+import { loadAvailabilityDays } from '../utils/serviceAreas';
 import {
   buildSchedulePayload,
   buildSchedulePayloads,

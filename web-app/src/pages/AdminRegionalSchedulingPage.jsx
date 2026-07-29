@@ -11,7 +11,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canAccess } from '../utils/permissions';
-import { loadAvailabilityDays } from '../utils/taitungAreas';
+import { loadAvailabilityDays } from '../utils/serviceAreas';
 import {
   applyPriceCalculation,
   buildSchedulePayload,

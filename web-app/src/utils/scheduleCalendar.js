@@ -1,4 +1,4 @@
-import { getServiceAreaLabel } from './taitungAreas';
+import { getServiceAreaLabel } from './serviceAreas';
 
 export const UNIT_PRICE_OPTIONS = [1500, 1300, 1000];
 
@@ -154,10 +154,6 @@ export function createServiceAddress(overrides = {}) {
   };
 }
 
-export function hasTaxablePricingLine(lines) {
-  return (lines || []).some((line) => Boolean(line.is_taxable));
-}
-
 export function deriveNeedsInvoice(form) {
   return Boolean(form.needs_invoice) || hasInvoicedPricingLine(form.pricing_lines);
 }
@@ -169,20 +165,6 @@ export function isTriplicateInvoice(form) {
 
   return Boolean(form.needs_invoice)
     && Boolean(String(form.invoice_title || '').trim() || String(form.invoice_tax_id || '').trim());
-}
-
-export function shouldChargeCustomerTax(form) {
-  const lines = form.pricing_lines || [];
-
-  if (hasInvoicedPricingLine(lines)) {
-    return lines.some((line) => lineHasInvoice(line) && line.charge_customer_tax !== false);
-  }
-
-  if (form.needs_invoice) {
-    return isTriplicateInvoice(form) || Boolean(form.invoice_charge_customer_tax);
-  }
-
-  return hasTaxablePricingLine(lines);
 }
 
 export function syncInvoiceTaxFlags(form) {
@@ -916,16 +898,6 @@ export function combineDateTime(dateStr, timeStr) {
   return new Date(`${date}T${time}:00`);
 }
 
-export function getCustomerSurname(customerName) {
-  const name = String(customerName || '').trim();
-
-  if (!name) {
-    return '客';
-  }
-
-  return [...name][0] ?? '客';
-}
-
 export function hasScheduleReport(schedule) {
   return Boolean(schedule?.daily_report || schedule?.dailyReport);
 }
@@ -1066,19 +1038,6 @@ export function getSchedulePlannedPrice(schedule) {
   return parseTaskDetails(schedule?.task_details).cleaning_price;
 }
 
-export function getScheduleDisplayPrice(schedule) {
-  const report = getScheduleReport(schedule);
-
-  if (report?.collected_amount != null && report.collected_amount !== '') {
-    const collected = Number(report.collected_amount);
-    if (Number.isFinite(collected)) {
-      return collected;
-    }
-  }
-
-  return getSchedulePlannedPrice(schedule);
-}
-
 export function getScheduleSegmentTotal(schedule) {
   const units = Number(getScheduleDisplayUnits(schedule)) || 0;
 
@@ -1179,17 +1138,6 @@ export function buildScheduleUnitsPriceTag(schedule, { hidePrice = false, relate
   }
 
   return `[${parsed.ac_units || '-'}離${parsed.cleaning_price || '-'}]`;
-}
-
-export function formatScheduleUnitsAndTotal(schedule) {
-  const units = getScheduleDisplayUnits(schedule);
-  const total = getSchedulePlannedPrice(schedule);
-
-  if (!units && !total) {
-    return '';
-  }
-
-  return `${units || '-'} 台｜${total || '-'} 元`;
 }
 
 export function formatScheduleAcUnits(schedule) {
@@ -1324,12 +1272,6 @@ export const LEAVE_EVENT_COLOR = {
   borderColor: '#F9A825',
   textColor: '#ffffff',
 };
-
-export const LEAVE_DAY_FILL = '#FBC02D';
-
-export const LEAVE_DAY_BORDER = '#F9A825';
-
-export const LEAVE_SCHEDULE_BACKGROUND = '#FBC02D';
 
 export const PROJECT_STATUS_LABELS = {
   in_progress: '施作中',

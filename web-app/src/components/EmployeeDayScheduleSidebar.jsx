@@ -3,7 +3,7 @@ import {
   formatDateOnly,
   formatScheduleDateLabel,
 } from '../utils/scheduleCalendar';
-import { getServiceAreaLabel } from '../utils/taitungAreas';
+import { getServiceAreaLabel } from '../utils/serviceAreas';
 
 function isEmployeeOnLeave(leaves, employeeId, workDate) {
   const date = formatDateOnly(workDate);
