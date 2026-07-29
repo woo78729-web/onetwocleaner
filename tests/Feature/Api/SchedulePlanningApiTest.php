@@ -56,11 +56,11 @@ class SchedulePlanningApiTest extends TestCase
             'work_date' => $workDate,
             'start_time' => '09:00',
             'end_time' => '12:00',
-            'service_area' => 'chishang',
+            'service_area' => 'zuoying',
             'ac_units' => 3,
         ]));
 
-        $response = $this->getJson('/api/admin/planning/availability?areas=chishang&days=7')
+        $response = $this->getJson('/api/admin/planning/availability?areas=zuoying&days=7')
             ->assertOk()
             ->assertJsonPath('status', 'success');
 
@@ -72,7 +72,7 @@ class SchedulePlanningApiTest extends TestCase
         $employee = collect($day['employees'])->firstWhere('id', $this->employee->id);
         $this->assertNotNull($employee);
         $this->assertCount(1, $employee['jobs']);
-        $this->assertSame('chishang', $employee['jobs'][0]['service_area']);
+        $this->assertSame('zuoying', $employee['jobs'][0]['service_area']);
         $this->assertTrue(collect($employee['open_slots'])->contains('from', '13:00'));
     }
 
@@ -87,10 +87,10 @@ class SchedulePlanningApiTest extends TestCase
             'work_date' => $workDate,
             'start_time' => '09:00',
             'end_time' => '12:00',
-            'service_area' => 'taitung_city',
+            'service_area' => 'pingtung_city',
         ]));
 
-        $response = $this->getJson('/api/admin/planning/availability?areas=chishang&days=7')
+        $response = $this->getJson('/api/admin/planning/availability?areas=zuoying&days=7')
             ->assertOk();
 
         $day = collect($response->json('data.days'))
@@ -113,10 +113,10 @@ class SchedulePlanningApiTest extends TestCase
             'work_date' => $workDate,
             'start_time' => '09:00',
             'end_time' => '15:00',
-            'service_area' => 'chishang',
+            'service_area' => 'zuoying',
         ]));
 
-        $response = $this->getJson('/api/admin/planning/availability?areas=chishang&days=7')
+        $response = $this->getJson('/api/admin/planning/availability?areas=zuoying&days=7')
             ->assertOk();
 
         $day = collect($response->json('data.days'))

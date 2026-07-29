@@ -634,11 +634,10 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
 }
 
 export function buildScheduleSuccessScreenshotName(summary) {
-  const prefix = summary?.mode === 'update' ? '班表更新' : '預約完成';
   const customerName = String(summary?.customer_name || '客戶').replace(/[\\/:*?"<>|]/g, '').trim() || '客戶';
   const dateText = formatDateOnly(summary?.work_date) || 'date';
 
-  return `${prefix}-${customerName}-${dateText}.png`;
+  return `預約完成-${customerName}-${dateText}.png`;
 }
 
 export function roundToScheduleTime(value) {

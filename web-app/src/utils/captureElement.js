@@ -11,6 +11,7 @@ function prepareElementForCapture(element) {
   element.style.maxHeight = 'none';
   element.style.overflow = 'visible';
   element.style.height = 'auto';
+  element.style.width = `${Math.max(element.scrollWidth, 360)}px`;
 
   element.querySelectorAll('.schedule-success-modal__actions, .schedule-success-modal__hint').forEach((node) => {
     node.style.display = 'none';
@@ -36,35 +37,63 @@ function triggerDownload(url, filename) {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  link.rel = 'noopener';
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   link.remove();
 }
 
-async function downloadCanvas(canvas, filename) {
+async function canvasToBlob(canvas) {
   const blob = await new Promise((resolve) => {
     canvas.toBlob(resolve, 'image/png');
   });
 
   if (blob) {
-    const url = URL.createObjectURL(blob);
-    triggerDownload(url, filename);
-    URL.revokeObjectURL(url);
-    return true;
+    return blob;
   }
 
   try {
     const dataUrl = canvas.toDataURL('image/png');
-    if (dataUrl && dataUrl.length > 22) {
-      triggerDownload(dataUrl, filename);
-      return true;
+    if (!dataUrl || dataUrl.length <= 22) {
+      return null;
     }
+
+    const response = await fetch(dataUrl);
+    return response.blob();
   } catch {
-    // fall through
+    return null;
+  }
+}
+
+async function downloadBlob(blob, filename) {
+  if (!blob) {
+    return false;
   }
 
-  return false;
+  const url = URL.createObjectURL(blob);
+
+  try {
+    triggerDownload(url, filename);
+    return true;
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+}
+
+async function copyBlobToClipboard(blob) {
+  if (!blob || !navigator.clipboard || !window.ClipboardItem) {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({ [blob.type || 'image/png']: blob }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function captureElementAsPng(element, { filename = 'screenshot.png', scale = 2 } = {}) {
@@ -82,6 +111,9 @@ export async function captureElementAsPng(element, { filename = 'screenshot.png'
   document.body.appendChild(sandbox);
 
   try {
+    // Force layout so html2canvas reads real dimensions off-screen.
+    void clone.offsetWidth;
+
     const { default: html2canvas } = await import('html2canvas');
     const safeScale = Math.min(scale, window.devicePixelRatio > 1 ? 2 : 1.5);
     const canvas = await html2canvas(clone, {
@@ -92,11 +124,24 @@ export async function captureElementAsPng(element, { filename = 'screenshot.png'
       logging: false,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: clone.scrollWidth,
-      windowHeight: clone.scrollHeight,
+      windowWidth: Math.max(clone.scrollWidth, 360),
+      windowHeight: Math.max(clone.scrollHeight, 240),
     });
 
-    return downloadCanvas(canvas, filename);
+    const blob = await canvasToBlob(canvas);
+
+    if (!blob) {
+      return false;
+    }
+
+    const downloaded = await downloadBlob(blob, filename);
+
+    if (downloaded) {
+      return true;
+    }
+
+    // Fallback when the browser blocks programmatic downloads.
+    return copyBlobToClipboard(blob);
   } finally {
     sandbox.remove();
   }

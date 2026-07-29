@@ -404,10 +404,13 @@ export function ScheduleEmployeeAvailabilityPanel({
         mode="multiple"
         selectedValues={selectedAreas}
         onChange={handleSelectedAreasChange}
+        autoSelectRegionOnExpand
       />
 
       {!selectedAreas.length && (
-        <p className="hint employee-availability-panel__empty">請先點選縣市（高雄／屏東／台南），再勾選區域，例如「左營」或「屏東市」。</p>
+        <p className="hint employee-availability-panel__empty">
+          請先點選縣市（高雄／屏東／台南）。點縣市後會展開區域，也可按「全選」一次帶入該縣所有區域。
+        </p>
       )}
 
       {loading && selectedAreas.length > 0 && (

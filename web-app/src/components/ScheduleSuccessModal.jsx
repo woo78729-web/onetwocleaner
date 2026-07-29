@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { captureElementAsPng } from '../utils/captureElement';
 import {
   buildScheduleSuccessScreenshotName,
@@ -10,10 +10,12 @@ import './schedule-calendar.css';
 
 export function ScheduleSuccessModal({ open, summary, onConfirm }) {
   const modalRef = useRef(null);
+  const downloadButtonRef = useRef(null);
+  const captureTokenRef = useRef(0);
   const [screenshotHint, setScreenshotHint] = useState('');
   const [capturing, setCapturing] = useState(false);
 
-  const captureScreenshot = useCallback(async () => {
+  const captureScreenshot = useCallback(async ({ silent = false } = {}) => {
     if (!summary || !modalRef.current) {
       return false;
     }
@@ -24,10 +26,16 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       const success = await captureElementAsPng(modalRef.current, {
         filename: buildScheduleSuccessScreenshotName(summary),
       });
-      setScreenshotHint(success ? '已自動下載截圖，可直接傳給客戶' : '截圖失敗，請再試一次');
+
+      if (!silent || success) {
+        setScreenshotHint(success
+          ? '已自動下載截圖，可直接傳給客戶'
+          : '無法自動下載，請再按一次「下載截圖」');
+      }
+
       return success;
     } catch {
-      setScreenshotHint('截圖失敗，請再試一次');
+      setScreenshotHint('無法自動下載，請再按一次「下載截圖」');
       return false;
     } finally {
       setCapturing(false);
@@ -37,61 +45,49 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
   useEffect(() => {
     if (!open) {
       setScreenshotHint('');
+      captureTokenRef.current += 1;
+    }
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !summary) {
       return undefined;
     }
 
-    if (!summary) {
-      return undefined;
-    }
-
+    const token = captureTokenRef.current + 1;
+    captureTokenRef.current = token;
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      if (cancelled || !modalRef.current) {
+
+    const run = async () => {
+      // Wait two frames so fonts/layout settle, then capture.
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(resolve);
+        });
+      });
+
+      if (cancelled || captureTokenRef.current !== token || !modalRef.current) {
         return;
       }
 
-      setCapturing(true);
+      const success = await captureScreenshot({ silent: true });
 
-      try {
-        await new Promise((resolve) => {
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(resolve);
-          });
-        });
-
-        if (cancelled || !modalRef.current) {
-          return;
-        }
-
-        const success = await captureElementAsPng(modalRef.current, {
-          filename: buildScheduleSuccessScreenshotName(summary),
-        });
-
-        if (!cancelled) {
-          setScreenshotHint(success ? '已自動下載截圖，可直接傳給客戶' : '截圖失敗，請再試一次');
-        }
-      } catch {
-        if (!cancelled) {
-          setScreenshotHint('截圖失敗，請再試一次');
-        }
-      } finally {
-        if (!cancelled) {
-          setCapturing(false);
-        }
+      if (!cancelled && !success) {
+        downloadButtonRef.current?.focus?.();
       }
-    }, 900);
+    };
+
+    const timer = window.setTimeout(run, 120);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, summary]);
+  }, [open, summary, captureScreenshot]);
 
   if (!open || !summary) {
     return null;
   }
-
-  const isUpdate = summary.mode === 'update';
 
   return (
     <div
@@ -109,7 +105,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       >
         <div className="schedule-success-modal__icon" aria-hidden="true">✓</div>
         <h3 id="schedule-success-title" className="schedule-success-modal__title">
-          {isUpdate ? '班表已更新' : '預約完成'}
+          預約完成
         </h3>
 
         <dl className="schedule-success-modal__list">
@@ -145,16 +141,17 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
 
         <div className="schedule-success-modal__actions">
           <button
+            ref={downloadButtonRef}
             type="button"
-            className="btn btn-secondary btn-pill schedule-success-modal__download"
+            className="btn btn-primary btn-pill schedule-success-modal__download"
             disabled={capturing}
             onClick={() => captureScreenshot()}
           >
-            {capturing ? '截圖中...' : '再次下載截圖'}
+            {capturing ? '截圖中...' : '下載截圖'}
           </button>
           <button
             type="button"
-            className="btn btn-primary btn-pill schedule-success-modal__action"
+            className="btn btn-secondary btn-pill schedule-success-modal__action"
             onClick={onConfirm}
           >
             確認
