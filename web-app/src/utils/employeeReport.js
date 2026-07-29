@@ -3,6 +3,7 @@ import {
   createPricingLine,
   EMPLOYEE_POSTAGE_AMOUNT,
   migratePricingLineFields,
+  lineHasInvoice,
 } from './scheduleCalendar';
 
 export const EMPLOYEE_INVOICE_TAX_RATE = 0.08;
@@ -17,13 +18,16 @@ function enrichLineForReportPricing(line, needsInvoice) {
       ...line,
       invoice_type: 'none',
       charge_customer_tax: false,
+      is_taxable: false,
     };
   }
 
+  // Override after normalize/migrate: those leave invoice_type=none with charge_customer_tax=false.
   return {
     ...line,
     invoice_type: 'duplicate',
-    charge_customer_tax: line.charge_customer_tax !== false,
+    charge_customer_tax: true,
+    is_taxable: true,
   };
 }
 
@@ -31,23 +35,37 @@ export function cloneSchedulePricingLines(schedule) {
   const lines = schedule?.pricing_lines;
 
   if (Array.isArray(lines) && lines.length > 0) {
-    return lines.map((line, index) => migratePricingLineFields({
-      id: `line-${index}`,
-      ac_units: String(line.ac_units ?? 1),
-      unit_price: String(line.unit_price ?? 1500),
-      is_taxable: Boolean(line.is_taxable),
-      invoice_type: line.invoice_type,
-      charge_customer_tax: line.charge_customer_tax,
-      invoice_title: line.invoice_title ?? '',
-      invoice_tax_id: line.invoice_tax_id ?? '',
-    }, schedule));
+    return lines.map((line, index) => {
+      const migrated = migratePricingLineFields({
+        id: `line-${index}`,
+        ac_units: String(line.ac_units ?? 1),
+        unit_price: String(line.unit_price ?? 1500),
+        is_taxable: Boolean(line.is_taxable),
+        invoice_type: line.invoice_type,
+        charge_customer_tax: line.charge_customer_tax,
+        invoice_title: line.invoice_title ?? '',
+        invoice_tax_id: line.invoice_tax_id ?? '',
+      }, schedule);
+
+      return {
+        ...migrated,
+        is_taxable: lineHasInvoice(migrated)
+          ? migrated.charge_customer_tax !== false
+          : Boolean(migrated.is_taxable),
+      };
+    });
   }
 
   return [migratePricingLineFields(createPricingLine({
     ac_units: String(schedule?.ac_units ?? 1),
     unit_price: String(schedule?.unit_price ?? 1500),
     is_taxable: Boolean(schedule?.needs_invoice),
-  }), schedule)];
+  }), schedule)].map((migrated) => ({
+    ...migrated,
+    is_taxable: lineHasInvoice(migrated)
+      ? migrated.charge_customer_tax !== false
+      : Boolean(migrated.is_taxable),
+  }));
 }
 
 export function scalePricingLinesForCompleted(lines, completedUnits, plannedUnits) {
@@ -122,13 +140,16 @@ export function calculateEmployeeReportDraft(schedule, draft) {
   const hasTax = Boolean(draft.has_tax);
   const needsInvoiceAndMail = Boolean(draft.needs_invoice_and_mail);
   const needsReceiptAndMail = Boolean(draft.needs_receipt_and_mail);
-  const needsInvoice = hasTax || needsInvoiceAndMail || Boolean(schedule?.needs_invoice);
   const needsMail = needsInvoiceAndMail || needsReceiptAndMail || Boolean(schedule?.needs_mail);
 
   const pricingLines = getEffectivePricingLines(schedule, draft, completedUnits, plannedUnits);
+  const hasLineInvoice = pricingLines.some(
+    (line) => lineHasInvoice(migratePricingLineFields(line, schedule)),
+  );
+  const needsInvoice = hasTax || needsInvoiceAndMail || Boolean(schedule?.needs_invoice) || hasLineInvoice;
   const { untaxedBase, collectedAmount } = summarizePricingLineTotals(pricingLines, needsInvoice, schedule);
   const temporaryPostage = needsMail ? EMPLOYEE_POSTAGE_AMOUNT : 0;
-  const reportInvoiceTaxCost = (hasTax || needsInvoiceAndMail)
+  const reportInvoiceTaxCost = (hasTax || needsInvoiceAndMail || hasLineInvoice)
     ? Math.round(untaxedBase * EMPLOYEE_INVOICE_TAX_RATE)
     : 0;
 
@@ -148,12 +169,15 @@ export function calculateEmployeeReportDraft(schedule, draft) {
 
 export function buildReportPayload(schedule, draft) {
   const calculated = calculateEmployeeReportDraft(schedule, draft);
+  const hasLineTax = calculated.pricingLines.some(
+    (line) => lineHasInvoice(migratePricingLineFields(line, schedule)),
+  );
 
   const payload = {
     schedule_id: schedule.id,
     completed_units: calculated.completedUnits,
     skip_reason: calculated.unitMismatch ? draft.skip_reason?.trim() || null : null,
-    has_tax: Boolean(draft.has_tax),
+    has_tax: Boolean(draft.has_tax) || hasLineTax,
     needs_invoice_and_mail: Boolean(draft.needs_invoice_and_mail),
     needs_receipt_and_mail: Boolean(draft.needs_receipt_and_mail),
     temporary_request: draft.temporary_request?.trim() || null,
@@ -163,13 +187,17 @@ export function buildReportPayload(schedule, draft) {
   };
 
   if (calculated.unitMismatch && Array.isArray(draft.pricing_lines) && draft.pricing_lines.length > 0) {
-    payload.pricing_lines = draft.pricing_lines.map((line) => ({
-      ac_units: Number(line.ac_units || 0),
-      unit_price: Number(line.unit_price || 0),
-      is_taxable: Boolean(line.is_taxable),
-      invoice_type: line.invoice_type,
-      charge_customer_tax: line.charge_customer_tax !== false,
-    }));
+    payload.pricing_lines = draft.pricing_lines.map((line) => {
+      const migrated = migratePricingLineFields(line, schedule);
+
+      return {
+        ac_units: Number(line.ac_units || 0),
+        unit_price: Number(line.unit_price || 0),
+        is_taxable: Boolean(line.is_taxable) || lineHasInvoice(migrated),
+        invoice_type: migrated.invoice_type,
+        charge_customer_tax: migrated.charge_customer_tax !== false,
+      };
+    });
   }
 
   return payload;
@@ -188,9 +216,12 @@ export function defaultMailFlagsFromSchedule(schedule) {
 
 export function buildDefaultReportDraft(schedule) {
   const mailFlags = defaultMailFlagsFromSchedule(schedule);
+  const clonedLines = cloneSchedulePricingLines(schedule);
+  const hasLineInvoice = clonedLines.some((line) => lineHasInvoice(line));
+  const hasTax = Boolean(schedule?.needs_invoice) || hasLineInvoice;
   const calculated = calculateEmployeeReportDraft(schedule, {
     completed_units: schedule?.ac_units ?? 1,
-    has_tax: Boolean(schedule?.needs_invoice),
+    has_tax: hasTax,
     ...mailFlags,
     paid_to_company: false,
   });
@@ -198,7 +229,7 @@ export function buildDefaultReportDraft(schedule) {
   return {
     completed_units: String(schedule?.ac_units ?? 1),
     skip_reason: '',
-    has_tax: Boolean(schedule?.needs_invoice),
+    has_tax: hasTax,
     ...mailFlags,
     temporary_request: '',
     collected_amount: String(calculated.collectedAmount),
