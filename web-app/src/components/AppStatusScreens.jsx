@@ -1,5 +1,11 @@
 import { Component } from 'react';
 
+function isChunkLoadError(error) {
+  const message = String(error?.message || error || '');
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\d]+ failed/i
+    .test(message);
+}
+
 export class AppErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -8,6 +14,19 @@ export class AppErrorBoundary extends Component {
 
   static getDerivedStateFromError(error) {
     return { error };
+  }
+
+  componentDidCatch(error) {
+    if (!isChunkLoadError(error)) {
+      return;
+    }
+
+    if (sessionStorage.getItem('spa-chunk-reload') === '1') {
+      return;
+    }
+
+    sessionStorage.setItem('spa-chunk-reload', '1');
+    window.location.reload();
   }
 
   render() {
@@ -22,7 +41,10 @@ export class AppErrorBoundary extends Component {
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  sessionStorage.removeItem('spa-chunk-reload');
+                  window.location.reload();
+                }}
               >
                 重新整理
               </button>
