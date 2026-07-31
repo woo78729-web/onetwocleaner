@@ -91,7 +91,9 @@ class EmployeeReportSupport
         ];
 
         if (! $recalculateCollectedAmount && ! array_key_exists('collected_amount', $overrides)) {
-            $input['collected_amount'] = $report->collected_amount;
+            $input['collected_amount'] = (bool) ($overrides['paid_to_company'] ?? false)
+                ? 0
+                : $report->collected_amount;
         }
 
         $payload = self::buildFromSchedule($schedule, $input, $report, $requireSkipReason);
@@ -147,6 +149,15 @@ class EmployeeReportSupport
                 $schedule->unit_price
             );
             $lines = EmployeeRemittance::scaleLines($lines, $completedUnits, $plannedUnits);
+        }
+
+        if (! $hasTax) {
+            foreach ($lines as $line) {
+                if (SchedulePricing::lineHasInvoice($line)) {
+                    $hasTax = true;
+                    break;
+                }
+            }
         }
 
         $skippedUnits = max(0, $plannedUnits - $completedUnits);
@@ -229,6 +240,15 @@ class EmployeeReportSupport
     {
         $report->loadMissing(['dailySchedule.user:id,name,account', 'companyRemittance']);
         $financial = CompanyRemittanceSupport::financialBreakdown($report);
+        $companyInboundAmount = CompanyRemittanceSupport::displayCompanyInboundAmount($report);
+
+        if ($report->paid_to_company) {
+            $financial['company_inbound_amount'] = $companyInboundAmount;
+
+            if ($companyInboundAmount === 0) {
+                $financial['total_amount'] = 0;
+            }
+        }
 
         return [
             'id' => $report->id,
@@ -254,6 +274,33 @@ class EmployeeReportSupport
             'created_at' => $report->created_at?->toDateTimeString(),
             'daily_schedule' => $report->dailySchedule,
         ];
+    }
+
+    public static function syncSchedulePlannedUnits(DailySchedule $schedule, int $completedUnits): DailySchedule
+    {
+        $plannedUnits = (int) $schedule->ac_units;
+
+        if ($completedUnits <= $plannedUnits) {
+            return $schedule;
+        }
+
+        $lines = SchedulePricing::normalizeLines(
+            $schedule->pricing_lines,
+            $schedule->ac_units,
+            $schedule->unit_price
+        );
+        $lines = EmployeeRemittance::scaleLines($lines, $completedUnits, $plannedUnits);
+        $summary = SchedulePricing::summarizeLines($lines, (bool) $schedule->needs_invoice);
+
+        $schedule->ac_units = $completedUnits;
+        $schedule->pricing_lines = $lines;
+        $schedule->cleaning_price = (int) $summary['cleaning_price'];
+        $schedule->unit_price = (int) $summary['unit_price'];
+        $schedule->task_details = $summary['task_details'];
+        $schedule->hongyi_fee = (int) $summary['hongyi_fee'];
+        $schedule->save();
+
+        return $schedule->fresh();
     }
 
     /**

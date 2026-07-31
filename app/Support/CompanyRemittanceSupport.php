@@ -155,7 +155,10 @@ class CompanyRemittanceSupport
             ->each(function (DailyReport $report) use ($projectIds) {
                 EmployeeReportSupport::resyncFromSchedule(
                     $report,
-                    ['paid_to_company' => true],
+                    [
+                        'paid_to_company' => true,
+                        'collected_amount' => 0,
+                    ],
                     false,
                 );
 
@@ -291,6 +294,31 @@ class CompanyRemittanceSupport
      *     advance_to_employee:int
      * }
      */
+    public static function displayCompanyInboundAmount(DailyReport $report): int
+    {
+        if (! $report->paid_to_company) {
+            return 0;
+        }
+
+        $report->loadMissing('dailySchedule.cleaningProject');
+        $project = $report->dailySchedule?->cleaningProject;
+
+        if ($project && (bool) $project->expects_company_remittance) {
+            $remittance = CompanyRemittance::query()
+                ->where('cleaning_project_id', $project->id)
+                ->orderBy('id')
+                ->first();
+
+            if (! $remittance || (int) $remittance->report_id !== (int) $report->id) {
+                return 0;
+            }
+
+            return (int) $remittance->amount;
+        }
+
+        return (int) (self::financialBreakdown($report)['company_inbound_amount'] ?? 0);
+    }
+
     public static function financialBreakdown(DailyReport $report): array
     {
         $report->loadMissing('dailySchedule');
@@ -731,7 +759,9 @@ class CompanyRemittanceSupport
             'confirmed_at' => $remittance->confirmed_at?->toDateTimeString(),
             'created_at' => $remittance->created_at?->toDateTimeString(),
             'work_date' => $isProjectTotal
-                ? ($project?->planned_end_date?->format('Y-m-d') ?? (string) $project?->planned_end_date)
+                ? (CleaningProjectSupport::lastReportWorkDate($project)
+                    ?? $project?->planned_end_date?->format('Y-m-d')
+                    ?? (string) $project?->planned_end_date)
                 : ($schedule?->work_date?->format('Y-m-d') ?? (string) $schedule?->work_date),
             'employee_name' => $employeeName,
             'customer_name' => $project?->customer_name ?? $schedule?->customer_name,
@@ -758,7 +788,7 @@ class CompanyRemittanceSupport
                 ->orderBy('id')
                 ->first();
 
-            if (! $remittance) {
+            if (! $remittance || (int) $remittance->report_id !== (int) $report->id) {
                 return null;
             }
 
@@ -892,9 +922,17 @@ class CompanyRemittanceSupport
 
     private static function hasActiveSplitGroup(CleaningProject $project): bool
     {
-        return CompanyRemittance::query()
+        $remittances = CompanyRemittance::query()
             ->where('cleaning_project_id', $project->id)
-            ->count() > 1;
+            ->get();
+
+        if ($remittances->count() <= 1) {
+            return false;
+        }
+
+        $expected = self::projectRemittanceAmount($project);
+
+        return (int) $remittances->sum('amount') === $expected;
     }
 
     private static function hasActiveSplitGroupForReport(DailyReport $report): bool
