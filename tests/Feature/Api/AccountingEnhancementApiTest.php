@@ -100,8 +100,10 @@ class AccountingEnhancementApiTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $yearMonth = now()->format('Y-m');
-        $workDate = now()->addDay()->toDateString();
+        $today = now()->startOfDay();
+        $yearMonth = $today->format('Y-m');
+        // 同月內日期，避免月底 now()->addDay() 跨月導致郵資算到下個月
+        $workDate = $today->copy()->day(min(15, $today->daysInMonth))->toDateString();
 
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
@@ -112,7 +114,7 @@ class AccountingEnhancementApiTest extends TestCase
             'customer_phone' => '0911111111',
             'customer_address' => '950臺東市測試路1號',
             'invoice_sent' => true,
-            'invoice_sent_at' => now(),
+            'invoice_sent_at' => $today,
             'mailed_at' => $workDate,
         ]));
 
@@ -128,8 +130,9 @@ class AccountingEnhancementApiTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $yearMonth = now()->format('Y-m');
-        $workDate = now()->addDay()->toDateString();
+        $today = now()->startOfDay();
+        $yearMonth = $today->format('Y-m');
+        $workDate = $today->copy()->day(min(15, $today->daysInMonth))->toDateString();
 
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
@@ -139,7 +142,7 @@ class AccountingEnhancementApiTest extends TestCase
             'customer_phone' => '0979518775',
             'customer_address' => '950臺東市地址一號',
             'invoice_sent' => true,
-            'invoice_sent_at' => now(),
+            'invoice_sent_at' => $today,
             'mailed_at' => $workDate,
         ]));
 
@@ -151,7 +154,7 @@ class AccountingEnhancementApiTest extends TestCase
             'customer_phone' => '0979518775',
             'customer_address' => '950臺東市地址二號',
             'invoice_sent' => true,
-            'invoice_sent_at' => now(),
+            'invoice_sent_at' => $today,
             'mailed_at' => $workDate,
         ]));
 
@@ -210,16 +213,19 @@ class AccountingEnhancementApiTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $currentMonth = now()->format('Y-m');
-        $previousMonthDate = now()->subMonth()->startOfMonth()->toDateString();
-        $previousMonth = now()->subMonth()->format('Y-m');
+        // 避免 mutable Carbon 對 now() 連續 subMonth() 造成「上月／本月」變成同一個月
+        $today = now()->startOfDay();
+        $currentMonth = $today->format('Y-m');
+        $previous = $today->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousMonth = $previous->format('Y-m');
+        $previousMonthDate = $previous->toDateString();
 
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
-            'work_date' => now()->toDateString(),
+            'work_date' => $today->toDateString(),
             'needs_invoice' => true,
             'invoice_sent' => true,
-            'invoice_sent_at' => now(),
+            'invoice_sent_at' => $today,
             'mailed_at' => $previousMonthDate,
         ]));
 
@@ -236,8 +242,10 @@ class AccountingEnhancementApiTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $previousMonth = now()->subMonth()->format('Y-m');
-        $mailedAt = now()->subMonth()->startOfMonth()->toDateString();
+        $today = now()->startOfDay();
+        $previous = $today->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousMonth = $previous->format('Y-m');
+        $mailedAt = $previous->toDateString();
 
         $this->postJson('/api/admin/accounting/manual-postage', [
             'mailed_at' => $mailedAt,
@@ -252,7 +260,7 @@ class AccountingEnhancementApiTest extends TestCase
             ->assertJsonPath('data.auto_charges.0.manual_postage_count', 1)
             ->assertJsonPath('data.auto_charges.0.amount', 28);
 
-        $this->getJson('/api/admin/accounting?year_month='.now()->format('Y-m'))
+        $this->getJson('/api/admin/accounting?year_month='.$today->format('Y-m'))
             ->assertOk()
             ->assertJsonMissingPath('data.auto_charges.0');
     }
