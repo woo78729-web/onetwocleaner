@@ -859,6 +859,7 @@ select option {
     max-content
     minmax(88px, 1fr)
     minmax(72px, 0.78fr)
+    max-content
     minmax(76px, 0.82fr)
     minmax(68px, 0.74fr)
     minmax(52px, 0.58fr)
@@ -934,9 +935,9 @@ select option {
   min-height: 32px;
   padding: 0 8px 0 3px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(232, 238, 247, 0.55);
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: rgba(15, 23, 42, 0.04);
+  color: #4b5568;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -948,17 +949,17 @@ select option {
   width: 24px;
   height: 24px;
   flex: 0 0 auto;
-  color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
 }
 
 .staff-line-bind__icon rect {
-  fill: #3a4454;
+  fill: #6b7280;
 }
 
 .staff-line-bind.is-bound {
-  border-color: rgba(6, 199, 85, 0.5);
-  background: rgba(6, 199, 85, 0.12);
-  color: #9dffc0;
+  border-color: rgba(5, 150, 65, 0.55);
+  background: rgba(6, 199, 85, 0.16);
+  color: #0a5c2e;
 }
 
 .staff-line-bind.is-bound .staff-line-bind__icon {
@@ -967,6 +968,10 @@ select option {
 
 .staff-line-bind.is-bound .staff-line-bind__icon rect {
   fill: #06c755;
+}
+
+.staff-line-bind__text {
+  color: inherit;
 }
 
 .staff-card__actions {
