@@ -14,6 +14,7 @@ use App\Support\PublicStorageLink;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Application as ArtisanApplication;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -41,6 +42,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        File::ensureDirectoryExists(storage_path('framework/cache/data'));
+        File::ensureDirectoryExists(storage_path('framework/sessions'));
+        File::ensureDirectoryExists(storage_path('framework/views'));
+        File::ensureDirectoryExists(storage_path('logs'));
+        File::ensureDirectoryExists(storage_path('app/public/avatars'));
+        File::ensureDirectoryExists(base_path('bootstrap/cache'));
+
         PublicStorageLink::ensure();
 
         RateLimiter::for('login', function (Request $request) {
