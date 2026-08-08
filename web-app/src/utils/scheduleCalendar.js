@@ -2136,7 +2136,8 @@ export function buildSchedulePayload(form, { original = null, userRole = 'admin'
     end_time: form.end_time,
     customer_name: form.customer_name.trim(),
     customer_phone: form.customer_phone.trim(),
-    customer_address: (primaryAddress?.address || form.customer_address).trim(),
+    // 多地址分段時 form.customer_address／service_addresses 已是本站，勿再回落到「第一站」
+    customer_address: String(form.customer_address || primaryAddress?.address || '').trim(),
     needs_mail: Boolean(form.needs_mail),
     mail_recipient: form.needs_mail ? form.mail_recipient?.trim() || null : null,
     mail_phone: form.needs_mail ? form.mail_phone?.trim() || null : null,
@@ -2280,6 +2281,8 @@ export function buildSchedulePayloads(form, options = {}) {
       ...form,
       customer_address: row.address,
       customer_phone: row.same_as_customer ? form.customer_phone : (row.phone || form.customer_phone),
+      // 只帶本站，避免 buildSchedulePayload 永遠讀到第一站地址
+      service_addresses: [row],
     }, options)];
   }
 
@@ -2297,6 +2300,11 @@ export function buildSchedulePayloads(form, options = {}) {
     const isFirst = index === 0;
     const segmentLine = resolveSegmentPricingLine(normalizedLines, index);
     const primaryInvoiceSettings = clonePricingLineInvoiceSettings(normalizedLines[0]);
+    const segmentAddress = createServiceAddress({
+      ...row,
+      ac_units: String(units),
+      address: row.address,
+    });
 
     payloads.push(buildSchedulePayload({
       ...form,
@@ -2304,6 +2312,8 @@ export function buildSchedulePayloads(form, options = {}) {
       end_time: endTime,
       customer_address: row.address,
       customer_phone: row.same_as_customer ? form.customer_phone : (row.phone || form.customer_phone),
+      // 每站各自一份，避免多地址時全部寫成第一站地址
+      service_addresses: [segmentAddress],
       pricing_lines: [{
         ...segmentLine,
         ...primaryInvoiceSettings,

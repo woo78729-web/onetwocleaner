@@ -1,5 +1,6 @@
 /** 服務區域：先選縣市，再選區／鄉／鎮 */
 export const KAOHSIUNG_SERVICE_AREAS = [
+  // 市區
   { value: 'zuoying', label: '左營', routeOrder: 0, region: 'kaohsiung' },
   { value: 'gushan', label: '鼓山', routeOrder: 1, region: 'kaohsiung' },
   { value: 'sanmin', label: '三民', routeOrder: 2, region: 'kaohsiung' },
@@ -9,13 +10,38 @@ export const KAOHSIUNG_SERVICE_AREAS = [
   { value: 'yancheng', label: '鹽埕', routeOrder: 6, region: 'kaohsiung' },
   { value: 'lingya', label: '苓雅', routeOrder: 7, region: 'kaohsiung' },
   { value: 'qianzhen', label: '前鎮', routeOrder: 8, region: 'kaohsiung' },
-  { value: 'xiaogang', label: '小港', routeOrder: 9, region: 'kaohsiung' },
-  { value: 'niaosong', label: '鳥松', routeOrder: 10, region: 'kaohsiung' },
-  { value: 'renwu', label: '仁武', routeOrder: 11, region: 'kaohsiung' },
-  { value: 'dashe', label: '大社', routeOrder: 12, region: 'kaohsiung' },
-  { value: 'fengshan', label: '鳳山', routeOrder: 13, region: 'kaohsiung' },
-  { value: 'gangshan', label: '岡山', routeOrder: 14, region: 'kaohsiung' },
-  { value: 'qiaotou', label: '橋頭', routeOrder: 15, region: 'kaohsiung' },
+  { value: 'qijin', label: '旗津', routeOrder: 9, region: 'kaohsiung' },
+  { value: 'xiaogang', label: '小港', routeOrder: 10, region: 'kaohsiung' },
+  // 鳳山／周邊
+  { value: 'fengshan', label: '鳳山', routeOrder: 11, region: 'kaohsiung' },
+  { value: 'niaosong', label: '鳥松', routeOrder: 12, region: 'kaohsiung' },
+  { value: 'renwu', label: '仁武', routeOrder: 13, region: 'kaohsiung' },
+  { value: 'dashe', label: '大社', routeOrder: 14, region: 'kaohsiung' },
+  { value: 'dashu', label: '大樹', routeOrder: 15, region: 'kaohsiung' },
+  { value: 'daliao', label: '大寮', routeOrder: 16, region: 'kaohsiung' },
+  { value: 'linyuan', label: '林園', routeOrder: 17, region: 'kaohsiung' },
+  // 岡山／北高雄
+  { value: 'gangshan', label: '岡山', routeOrder: 18, region: 'kaohsiung' },
+  { value: 'qiaotou', label: '橋頭', routeOrder: 19, region: 'kaohsiung' },
+  { value: 'yanchao', label: '燕巢', routeOrder: 20, region: 'kaohsiung' },
+  { value: 'tianliao', label: '田寮', routeOrder: 21, region: 'kaohsiung' },
+  { value: 'alian', label: '阿蓮', routeOrder: 22, region: 'kaohsiung' },
+  { value: 'luzhu', label: '路竹', routeOrder: 23, region: 'kaohsiung' },
+  { value: 'hunei', label: '湖內', routeOrder: 24, region: 'kaohsiung' },
+  { value: 'qieding', label: '茄萣', routeOrder: 25, region: 'kaohsiung' },
+  { value: 'yongan', label: '永安', routeOrder: 26, region: 'kaohsiung' },
+  { value: 'mituo', label: '彌陀', routeOrder: 27, region: 'kaohsiung' },
+  { value: 'ziguan', label: '梓官', routeOrder: 28, region: 'kaohsiung' },
+  // 旗美／山區
+  { value: 'qishan', label: '旗山', routeOrder: 29, region: 'kaohsiung' },
+  { value: 'meinong', label: '美濃', routeOrder: 30, region: 'kaohsiung' },
+  { value: 'liugui', label: '六龜', routeOrder: 31, region: 'kaohsiung' },
+  { value: 'jiaxian', label: '甲仙', routeOrder: 32, region: 'kaohsiung' },
+  { value: 'shanlin', label: '杉林', routeOrder: 33, region: 'kaohsiung' },
+  { value: 'neimen', label: '內門', routeOrder: 34, region: 'kaohsiung' },
+  { value: 'maolin', label: '茂林', routeOrder: 35, region: 'kaohsiung' },
+  { value: 'taoyuan_kh', label: '桃源', routeOrder: 36, region: 'kaohsiung' },
+  { value: 'namasia', label: '那瑪夏', routeOrder: 37, region: 'kaohsiung' },
 ];
 
 export const PINGTUNG_SERVICE_AREAS = [
