@@ -1672,7 +1672,7 @@
   }
 
   .schedule-success-modal__row {
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 76px 1fr;
     gap: 10px;
     padding: 10px 0;
   }
@@ -3798,7 +3798,7 @@
 
 .schedule-success-modal__row {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 76px 1fr;
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid rgba(16, 42, 67, 0.12);

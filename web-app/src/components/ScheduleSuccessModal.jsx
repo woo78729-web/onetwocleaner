@@ -89,6 +89,12 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
     return null;
   }
 
+  const addressList = Array.isArray(summary.customer_addresses)
+    ? summary.customer_addresses.map((item) => String(item || '').trim()).filter(Boolean)
+    : [];
+  const hasMultipleAddresses = addressList.length > 1;
+  const addressOrdinals = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
   return (
     <div
       className="modal-overlay schedule-success-overlay"
@@ -125,10 +131,19 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
             <dt>金額</dt>
             <dd>{formatSuccessSummaryTotalPrice(summary)}</dd>
           </div>
-          <div className="schedule-success-modal__row">
-            <dt>清洗地址</dt>
-            <dd>{summary.customer_address || '-'}</dd>
-          </div>
+          {hasMultipleAddresses ? (
+            addressList.map((address, index) => (
+              <div key={`success-address-${index}`} className="schedule-success-modal__row">
+                <dt>{`第${addressOrdinals[index] || index + 1}地址`}</dt>
+                <dd>{address}</dd>
+              </div>
+            ))
+          ) : (
+            <div className="schedule-success-modal__row">
+              <dt>清洗地址</dt>
+              <dd>{addressList[0] || summary.customer_address || '-'}</dd>
+            </div>
+          )}
           <div className="schedule-success-modal__row">
             <dt>客戶電話</dt>
             <dd>{summary.customer_phone || '-'}</dd>
