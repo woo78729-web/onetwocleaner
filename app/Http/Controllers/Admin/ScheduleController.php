@@ -396,32 +396,25 @@ class ScheduleController extends Controller
             $segmentUnits = max(1, (int) ($multiAddressPart['segment_units'] ?? ($lines[0]['ac_units'] ?? 1)));
             $groupUnits = max($segmentUnits, (int) ($multiAddressPart['group_units'] ?? $segmentUnits));
             $groupPrice = max(0, (int) ($multiAddressPart['group_price'] ?? 0));
-            $primaryLine = $lines[0] ?? SchedulePricing::normalizeLines(null)[0];
+            // 各站依本站 pricing_lines 各自計算應收（可能跟不同人收），勿把總額全掛第一站
+            $segmentSummary = SchedulePricing::summarizeLines($lines, false);
+            $segmentUnitsResolved = max(1, (int) (($segmentSummary['ac_units'] ?? 0) ?: $segmentUnits));
+            $segmentCleaningPrice = max(0, (int) ($segmentSummary['cleaning_price'] ?? 0));
 
             if ($partIndex === 1) {
-                $lines = [[
-                    'ac_units' => $segmentUnits,
-                    'unit_price' => (int) ($primaryLine['unit_price'] ?? 1500),
-                    'is_taxable' => (bool) ($primaryLine['is_taxable'] ?? false),
-                    'invoice_type' => $primaryLine['invoice_type'] ?? SchedulePricing::INVOICE_TYPE_NONE,
-                    'invoice_title' => $primaryLine['invoice_title'] ?? null,
-                    'invoice_tax_id' => $primaryLine['invoice_tax_id'] ?? null,
-                    'charge_customer_tax' => (bool) ($primaryLine['charge_customer_tax'] ?? false),
-                ]];
                 $summary = [
-                    'ac_units' => $segmentUnits,
-                    'unit_price' => (int) ($primaryLine['unit_price'] ?? 1500),
-                    'cleaning_price' => $groupPrice,
-                    'hongyi_fee' => (int) ($payload['hongyi_fee'] ?? $summary['hongyi_fee'] ?? 0),
+                    'ac_units' => $segmentUnitsResolved,
+                    'unit_price' => (int) ($segmentSummary['unit_price'] ?? 1500),
+                    'cleaning_price' => $segmentCleaningPrice,
+                    'hongyi_fee' => (int) ($payload['hongyi_fee'] ?? $segmentSummary['hongyi_fee'] ?? 0),
                     'needs_invoice' => $needsInvoice,
-                    'task_details' => $segmentUnits.'台'.($primaryLine['unit_price'] ?? 1500).'·共'.$groupUnits.'台'.$groupPrice,
+                    'task_details' => $segmentSummary['task_details'].'·共'.$groupUnits.'台'.$groupPrice,
                 ];
             } else {
-                $segmentSummary = SchedulePricing::summarizeLines($lines, $needsInvoice);
                 $summary = [
-                    'ac_units' => $segmentUnits,
-                    'unit_price' => (int) ($lines[0]['unit_price'] ?? 1500),
-                    'cleaning_price' => 0,
+                    'ac_units' => $segmentUnitsResolved,
+                    'unit_price' => (int) ($segmentSummary['unit_price'] ?? ($lines[0]['unit_price'] ?? 1500)),
+                    'cleaning_price' => $segmentCleaningPrice,
                     'hongyi_fee' => 0,
                     'needs_invoice' => false,
                     'task_details' => $segmentSummary['task_details'],

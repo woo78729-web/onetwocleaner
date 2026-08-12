@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Cron;
 
 use App\Http\Controllers\Controller;
+use App\Support\TomorrowSchedulePushSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SendTomorrowSchedulesController extends Controller
 {
@@ -16,15 +18,27 @@ class SendTomorrowSchedulesController extends Controller
         }
 
         $dryRun = $request->boolean('dry_run');
-        $exitCode = Artisan::call('app:send-tomorrow-schedules', [
-            '--dry-run' => $dryRun,
-        ]);
+
+        try {
+            $result = TomorrowSchedulePushSupport::send(dryRun: $dryRun);
+        } catch (Throwable $e) {
+            Log::error('Tomorrow schedule push crashed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return $this->error('明日班表推播發生錯誤：'.$e->getMessage(), 500);
+        }
+
+        $failed = (int) ($result['failed'] ?? 0);
+        $hasLineToken = (string) config('services.line.channel_access_token') !== '';
 
         return $this->success([
-            'exit_code' => $exitCode,
             'dry_run' => $dryRun,
-            'output' => trim(Artisan::output()),
-        ], $exitCode === 0 ? '明日班表推播已執行' : '明日班表推播執行完成（含失敗）');
+            'line_token_configured' => $hasLineToken,
+            'result' => $result,
+        ], $failed > 0 ? '明日班表推播執行完成（含失敗）' : '明日班表推播已執行');
     }
 
     private function authorized(Request $request): bool

@@ -112,7 +112,9 @@ class TomorrowSchedulePushSupport
      */
     public static function buildMessage(string $employeeName, string $date, Collection $schedules): string
     {
-        $totalReceivable = (int) $schedules->sum(fn (DailySchedule $schedule) => max(0, (int) ($schedule->cleaning_price ?? 0)));
+        $totalReceivable = (int) $schedules->sum(
+            fn ($schedule) => self::resolveReceivableAmount($schedule),
+        );
 
         $lines = [
             "📅 明日班表提醒 ({$date})",
@@ -126,7 +128,7 @@ class TomorrowSchedulePushSupport
             $mapsUrl = $address !== ''
                 ? 'https://www.google.com/maps/search/?api=1&query='.rawurlencode($address)
                 : '（無地址）';
-            $amount = max(0, (int) ($schedule->cleaning_price ?? 0));
+            $amount = self::resolveReceivableAmount($schedule);
 
             $lines[] = '----------------------';
             $lines[] = '⏰ '.self::formatTime($schedule->start_time).' - '.self::formatTime($schedule->end_time);
@@ -140,6 +142,24 @@ class TomorrowSchedulePushSupport
         $lines[] = '----------------------';
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * 推播應收優先用本站 pricing_lines（多地址各自收款），避免舊資料把總額掛在第一站、其餘為 0。
+     */
+    private static function resolveReceivableAmount(mixed $schedule): int
+    {
+        $pricingLines = data_get($schedule, 'pricing_lines');
+
+        if (is_array($pricingLines) && $pricingLines !== []) {
+            $fromLines = (int) SchedulePricing::summarizeLines($pricingLines, false)['cleaning_price'];
+
+            if ($fromLines > 0) {
+                return $fromLines;
+            }
+        }
+
+        return max(0, (int) data_get($schedule, 'cleaning_price', 0));
     }
 
     private static function formatMoney(int $amount): string

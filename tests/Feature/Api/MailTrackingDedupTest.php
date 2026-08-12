@@ -185,6 +185,8 @@ class MailTrackingDedupTest extends TestCase
         $this->assertFalse($schedule->needs_mail);
         $this->assertFalse($schedule->needs_invoice);
         $this->assertFalse(MailTrackingSupport::scheduleRequiresMailTracking($schedule));
+        // 第二站依本站單價各自應收（2台×1500含5% = 3150），不再寫 0
+        $this->assertSame(3150, (int) $schedule->cleaning_price);
     }
 
     public function test_store_preserves_invoiced_pricing_line_on_multi_address_follow_up_station(): void

@@ -80,8 +80,13 @@ export function AdminReportEditModal({
   }
 
   return (
-    <div className="modal-overlay" role="presentation" onClick={onClose}>
-      <div className="modal-panel modal-panel--wide" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+    <div className="modal-overlay schedule-form-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal-panel modal-panel--wide modal-panel--opaque"
+        role="dialog"
+        aria-modal="true"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="modal-header">
           <h2 className="modal-title">調整回報</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="關閉">×</button>
