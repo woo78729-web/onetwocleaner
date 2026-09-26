@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { flushSync } from 'react-dom';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -228,6 +228,7 @@ export function ScheduleCalendar({
   });
 
   const dragEnabled = Boolean(onEventDrop);
+  const calendarRef = useRef(null);
 
   const CalendarComponent = useDragAndDropCalendar(dragEnabled);
 
@@ -271,9 +272,59 @@ export function ScheduleCalendar({
         return previous;
       }
 
+      if (previous === 'week' && !weekView) {
+        return 'day';
+      }
+
       return safeDisplayDays === 1 ? 'day' : 'week';
     });
-  }, [safeDisplayDays]);
+  }, [safeDisplayDays, weekView]);
+
+  useEffect(() => {
+    const node = calendarRef.current;
+
+    if (!node) {
+      return undefined;
+    }
+
+    let frame = 0;
+    let timer = 0;
+    let lastWidth = 0;
+    let lastHeight = 0;
+
+    const poke = () => {
+      const width = node.clientWidth;
+      const height = node.clientHeight;
+
+      if (!width || !height || (width === lastWidth && height === lastHeight)) {
+        return;
+      }
+
+      lastWidth = width;
+      lastHeight = height;
+      window.dispatchEvent(new Event('resize'));
+    };
+
+    frame = window.requestAnimationFrame(() => {
+      poke();
+      timer = window.setTimeout(poke, 180);
+    });
+
+    let observer;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        poke();
+      });
+      observer.observe(node);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
+  }, [view, safeDisplayDays]);
 
 
 
@@ -508,7 +559,10 @@ export function ScheduleCalendar({
 
   return (
 
-    <div className={`schedule-workspace schedule-calendar schedule-calendar--view-${view}${colorMode === 'employee' ? ' schedule-calendar--avatars' : ''}${onDrillDown ? ' schedule-calendar--drilldown' : ''}${dragEnabled ? ' schedule-calendar--draggable' : ''}`}>
+    <div
+      ref={calendarRef}
+      className={`schedule-workspace schedule-calendar schedule-calendar--view-${view}${colorMode === 'employee' ? ' schedule-calendar--avatars' : ''}${onDrillDown ? ' schedule-calendar--drilldown' : ''}${dragEnabled ? ' schedule-calendar--draggable' : ''}`}
+    >
 
       <div
         className={`schedule-calendar-scroll${view === 'week' && safeDisplayDays > 1 ? ' schedule-calendar-scroll--wide' : ''}${view === 'month' ? ' schedule-calendar-scroll--month' : ''}`}

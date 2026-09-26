@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PageErrorBoundary } from '../components/PageErrorBoundary';
@@ -19,6 +19,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
+import { loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
 import { loadAvailabilityDays } from '../utils/serviceAreas';
 import {
   buildSchedulePayload,
@@ -83,6 +84,7 @@ export default function AdminSchedulesPage() {
   const [successSummary, setSuccessSummary] = useState(null);
   const [pendingMailRedirect, setPendingMailRedirect] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const scheduleRequestRef = useRef(0);
 
   const schedules = useMemo(() => {
     if (!selectedAreas.length) {
@@ -102,6 +104,8 @@ export default function AdminSchedulesPage() {
     days = lookaheadDays,
     visibleDayCount = displayDays,
   ) => {
+    const requestId = scheduleRequestRef.current + 1;
+    scheduleRequestRef.current = requestId;
     setError('');
     try {
       const fetchRange = getAdminCalendarFetchRange(anchor, visibleDayCount);
@@ -114,18 +118,33 @@ export default function AdminSchedulesPage() {
         ? fetchRange.date_to
         : availabilityRange.date_to;
 
-      const [result, leaveResult] = await Promise.all([
-        api.getCalendarSchedules({
-          date_from,
-          date_to,
-          user_id: employeeId || undefined,
-        }),
-        api.getPlanningLeaves(calendarRange),
-      ]);
+      const payload = await loadWithRetry(async () => {
+        const [result, leaveResult] = await Promise.all([
+          api.getCalendarSchedules({
+            date_from,
+            date_to,
+            user_id: employeeId || undefined,
+          }),
+          api.getPlanningLeaves(calendarRange),
+        ]);
 
-      setAllSchedules(result.data.schedules);
-      setLeaves(leaveResult.data.leaves || []);
+        return {
+          schedules: result.data?.schedules || [],
+          leaves: leaveResult.data?.leaves || [],
+        };
+      });
+
+      if (scheduleRequestRef.current !== requestId) {
+        return;
+      }
+
+      setAllSchedules(payload.schedules);
+      setLeaves(payload.leaves);
     } catch (err) {
+      if (scheduleRequestRef.current !== requestId) {
+        return;
+      }
+
       setError(err.message);
     }
   }, [currentDate, selectedEmployeeId, lookaheadDays, displayDays]);
@@ -137,6 +156,10 @@ export default function AdminSchedulesPage() {
   useEffect(() => {
     loadSchedules(currentDate, selectedEmployeeId, lookaheadDays, displayDays).catch((err) => setError(err.message));
   }, [currentDate, selectedEmployeeId, lookaheadDays, displayDays, loadSchedules]);
+
+  useRefreshOnVisible(() => {
+    loadSchedules(currentDate, selectedEmployeeId, lookaheadDays, displayDays).catch((err) => setError(err.message));
+  });
 
   useEffect(() => {
     if (!isMobile) {

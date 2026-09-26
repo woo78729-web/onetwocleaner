@@ -1,10 +1,5 @@
 import { Component } from 'react';
-
-function isChunkLoadError(error) {
-  const message = String(error?.message || error || '');
-  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\d]+ failed/i
-    .test(message);
-}
+import { canAutoReloadForChunk, clearChunkReload, isChunkLoadError } from '../utils/lazyRetry';
 
 export class AppErrorBoundary extends Component {
   constructor(props) {
@@ -21,11 +16,11 @@ export class AppErrorBoundary extends Component {
       return;
     }
 
-    if (sessionStorage.getItem('spa-chunk-reload') === '1') {
+    if (!canAutoReloadForChunk()) {
       return;
     }
 
-    sessionStorage.setItem('spa-chunk-reload', '1');
+    sessionStorage.setItem('spa-chunk-reload-at', String(Date.now()));
     window.location.reload();
   }
 
@@ -42,7 +37,7 @@ export class AppErrorBoundary extends Component {
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={() => {
-                  sessionStorage.removeItem('spa-chunk-reload');
+                  clearChunkReload();
                   window.location.reload();
                 }}
               >

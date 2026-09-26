@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   endOfMonth,
@@ -18,6 +18,7 @@ import {
   formatScheduleDateLabel,
   sortSchedulesWithOverduePinned,
 } from '../utils/scheduleCalendar';
+import { loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
 import '../components/schedule-calendar.css';
 
 function todayDateString() {
@@ -51,6 +52,7 @@ export default function EmployeeCalendarPage() {
   const [snapshotSchedule, setSnapshotSchedule] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const calendarRequestRef = useRef(0);
 
   const monthStartKey = useMemo(
     () => formatDateOnly(startOfMonth(visibleMonth)),
@@ -116,32 +118,53 @@ export default function EmployeeCalendarPage() {
   );
 
   const loadCalendarData = useCallback(async () => {
+    const requestId = calendarRequestRef.current + 1;
+    calendarRequestRef.current = requestId;
     setLoading(true);
     setError('');
 
     try {
-      const [leaveResult, scheduleResult] = await Promise.all([
-        api.getEmployeeLeaves(),
-        api.getEmployeeSchedules({
-          date_from: monthStartKey,
-          date_to: monthEndKey,
-        }),
-      ]);
+      const payload = await loadWithRetry(async () => {
+        const [leaveResult, scheduleResult] = await Promise.all([
+          api.getEmployeeLeaves(),
+          api.getEmployeeSchedules({
+            date_from: monthStartKey,
+            date_to: monthEndKey,
+          }),
+        ]);
 
-      setLeaves(leaveResult.data.leaves || []);
-      setMonthSchedules(scheduleResult.data.schedules || []);
+        return {
+          leaves: leaveResult.data?.leaves || [],
+          schedules: scheduleResult.data?.schedules || [],
+        };
+      });
+
+      if (calendarRequestRef.current !== requestId) {
+        return;
+      }
+
+      setLeaves(payload.leaves);
+      setMonthSchedules(payload.schedules);
     } catch (err) {
+      if (calendarRequestRef.current !== requestId) {
+        return;
+      }
+
       setError(err.message);
-      setLeaves([]);
-      setMonthSchedules([]);
     } finally {
-      setLoading(false);
+      if (calendarRequestRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [monthEndKey, monthStartKey]);
 
   useEffect(() => {
     loadCalendarData().catch((err) => setError(err.message));
   }, [loadCalendarData]);
+
+  useRefreshOnVisible(() => {
+    loadCalendarData().catch((err) => setError(err.message));
+  });
 
   function handleDaySelect(nextDate) {
     if (!nextDate || nextDate > tomorrow) {
