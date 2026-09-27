@@ -264,7 +264,7 @@ export function PartnerSettlementReport({ settlement, employees = [] }) {
         </div>
         <div className="partner-settlement-basis">
           <SettlementLine
-            label="師傅公司份（1500→600／1300→500／1000→400）"
+            label="師傅公司份（1500→600／1400→550／1300→500／1000→400／900→350）"
             amount={basis.company_share_total ?? 0}
             hint="等同 Excel 周結／應結加總"
           />

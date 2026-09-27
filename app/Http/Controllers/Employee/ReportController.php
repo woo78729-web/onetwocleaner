@@ -8,6 +8,7 @@ use App\Models\DailySchedule;
 use App\Support\EmployeeMonthlySummary;
 use App\Support\EmployeeReportSupport;
 use App\Support\EmployeeScheduleSupport;
+use App\Support\SchedulePricing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -125,7 +126,7 @@ class ReportController extends Controller
             'paid_to_company' => ['sometimes', 'boolean'],
             'pricing_lines' => ['sometimes', 'array'],
             'pricing_lines.*.ac_units' => ['required_with:pricing_lines', 'integer', 'min:1'],
-            'pricing_lines.*.unit_price' => ['required_with:pricing_lines', 'integer', 'in:1500,1300,1000'],
+            'pricing_lines.*.unit_price' => ['required_with:pricing_lines', 'integer', Rule::in(SchedulePricing::unitPrices())],
             'pricing_lines.*.is_taxable' => ['sometimes', 'boolean'],
             'pricing_lines.*.invoice_type' => ['sometimes', 'nullable', 'string', 'in:none,duplicate,triplicate'],
             'pricing_lines.*.charge_customer_tax' => ['sometimes', 'boolean'],

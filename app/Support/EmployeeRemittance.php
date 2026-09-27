@@ -15,8 +15,10 @@ class EmployeeRemittance
     {
         return [
             1500 => 600,
+            1400 => 550,
             1300 => 500,
             1000 => 400,
+            900 => 350,
         ];
     }
 
@@ -32,20 +34,22 @@ class EmployeeRemittance
     }
 
     /**
-     * @return array{1500:int, 1300:int, 1000:int}
+     * @return array<int, int>
      */
     public static function emptyTierUnitCounts(): array
     {
         return [
             1500 => 0,
+            1400 => 0,
             1300 => 0,
             1000 => 0,
+            900 => 0,
         ];
     }
 
     /**
      * @param  list<array{ac_units:int, unit_price:int}>  $lines
-     * @return array{1500:int, 1300:int, 1000:int}
+     * @return array<int, int>
      */
     public static function tierUnitCounts(array $lines): array
     {
@@ -65,9 +69,9 @@ class EmployeeRemittance
     }
 
     /**
-     * @param  array{1500:int, 1300:int, 1000:int}  $base
-     * @param  array{1500:int, 1300:int, 1000:int}  $delta
-     * @return array{1500:int, 1300:int, 1000:int}
+     * @param  array<int, int>  $base
+     * @param  array<int, int>  $delta
+     * @return array<int, int>
      */
     public static function mergeTierUnitCounts(array $base, array $delta): array
     {

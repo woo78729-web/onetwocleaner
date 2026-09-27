@@ -17,6 +17,7 @@ import {
   getProjectDurationDays,
   getProjectStatusLabel,
   PROJECT_STATUS_LABELS,
+  UNIT_PRICE_OPTIONS,
 } from '../utils/scheduleCalendar';
 
 function buildAssignmentDraft(project) {
@@ -492,9 +493,9 @@ export default function AdminProjectsPage() {
                       value={unitsForm.unit_price}
                       onChange={(event) => setUnitsForm({ ...unitsForm, unit_price: event.target.value })}
                     >
-                      <option value="1500">1500</option>
-                      <option value="1300">1300</option>
-                      <option value="1000">1000</option>
+                      {UNIT_PRICE_OPTIONS.map((price) => (
+                        <option key={price} value={String(price)}>{price}</option>
+                      ))}
                     </select>
                   </label>
                   <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
@@ -620,9 +621,9 @@ export default function AdminProjectsPage() {
                                       [schedule.id]: { ...draft, unit_price: event.target.value },
                                     })}
                                   >
-                                    <option value="1500">1500</option>
-                                    <option value="1300">1300</option>
-                                    <option value="1000">1000</option>
+                                    {UNIT_PRICE_OPTIONS.map((price) => (
+                                      <option key={price} value={String(price)}>{price}</option>
+                                    ))}
                                   </select>
                                 </label>
                                 <div className="form-actions">
@@ -675,9 +676,9 @@ export default function AdminProjectsPage() {
                 <label className="field">
                   <span className="field-label">單價</span>
                   <select className="field-control" value={supplementForm.unit_price} onChange={(event) => setSupplementForm({ ...supplementForm, unit_price: event.target.value })}>
-                    <option value="1500">1500</option>
-                    <option value="1300">1300</option>
-                    <option value="1000">1000</option>
+                    {UNIT_PRICE_OPTIONS.map((price) => (
+                      <option key={price} value={String(price)}>{price}</option>
+                    ))}
                   </select>
                 </label>
                 <div className="form-actions" style={{ gridColumn: '1 / -1' }}>

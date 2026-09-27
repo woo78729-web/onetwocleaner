@@ -19,7 +19,7 @@ class SchedulePricing
      */
     public static function unitPrices(): array
     {
-        return [1500, 1300, 1000];
+        return [1500, 1400, 1300, 1000, 900];
     }
 
     public static function calculateTotal(int $acUnits, int $unitPrice, bool $needsInvoice): int

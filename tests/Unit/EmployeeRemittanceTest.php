@@ -115,4 +115,22 @@ class EmployeeRemittanceTest extends TestCase
         $this->assertSame(0, $summary['invoice_surcharge_due']);
         $this->assertSame(13000, $summary['company_transfer']);
     }
+
+    public function test_unit_prices_split_employee_keep_and_company_remittance(): void
+    {
+        $this->assertSame(600, EmployeeRemittance::remittancePerUnit(1500));
+        $this->assertSame(900, EmployeeRemittance::employeeSharePerUnit(1500));
+
+        $this->assertSame(550, EmployeeRemittance::remittancePerUnit(1400));
+        $this->assertSame(850, EmployeeRemittance::employeeSharePerUnit(1400));
+
+        $this->assertSame(500, EmployeeRemittance::remittancePerUnit(1300));
+        $this->assertSame(800, EmployeeRemittance::employeeSharePerUnit(1300));
+
+        $this->assertSame(400, EmployeeRemittance::remittancePerUnit(1000));
+        $this->assertSame(600, EmployeeRemittance::employeeSharePerUnit(1000));
+
+        $this->assertSame(350, EmployeeRemittance::remittancePerUnit(900));
+        $this->assertSame(550, EmployeeRemittance::employeeSharePerUnit(900));
+    }
 }

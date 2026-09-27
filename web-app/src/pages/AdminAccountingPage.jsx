@@ -4,6 +4,7 @@ import { PageAlert } from '../components/PageAlert';
 import { PartnerSettlementReport } from '../components/PartnerSettlementReport';
 import { SettlementLedgerTable } from '../components/SettlementLedgerTable';
 import { api } from '../api/client';
+import { UNIT_PRICE_OPTIONS } from '../utils/scheduleCalendar';
 
 function currentYearMonth() {
   const now = new Date();
@@ -155,7 +156,7 @@ export default function AdminAccountingPage() {
       <section className="card">
         <div className="card-header">
           <h2 className="card-title">月份查詢</h2>
-          <p className="hint">依回報資料計算各員工應收、應退、合夥分潤。1500 收 600、1300 收 500、1000 收 400；客戶匯款給公司者依單價退員工差額。</p>
+          <p className="hint">依回報資料計算各員工應收、應退、合夥分潤。1500 收 600、1400 收 550、1300 收 500、1000 收 400、900 收 350；客戶匯款給公司者依單價退員工差額。</p>
         </div>
         <div className="filter-toolbar">
           <label className="field field-compact">
@@ -459,7 +460,7 @@ export default function AdminAccountingPage() {
             <div className="card-header" style={{ padding: '16px 16px 0' }}>
               <h2 className="card-title">員工績效細項</h2>
               <p className="hint">
-                依單價統計台數（1500／1300／1000）。師傅實拿 = 客戶總額 − 公司抽成（1500→600、1300→500、1000→400）− 發票稅8% − 賠償 + 車馬費加給。
+                依單價統計台數（1500／1400／1300／1000／900）。師傅實拿 = 客戶總額 − 公司抽成（1500→600、1400→550、1300→500、1000→400、900→350）− 發票稅8% − 賠償 + 車馬費加給。
                 「應向師傅收」= 現場應繳 + 賠償入公司，方便萬兔對帳。
               </p>
             </div>
@@ -467,18 +468,18 @@ export default function AdminAccountingPage() {
               <table className="data-table accounting-performance-table">
                 <colgroup>
                   <col className="col-employee" />
-                  <col className="col-units" />
-                  <col className="col-units" />
-                  <col className="col-units" />
+                  {UNIT_PRICE_OPTIONS.map((price) => (
+                    <col key={price} className="col-units" />
+                  ))}
                   <col className="col-total-units" />
                   <col className="col-money" span={7} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>員工</th>
-                    <th className="num">1500台</th>
-                    <th className="num">1300台</th>
-                    <th className="num">1000台</th>
+                    {UNIT_PRICE_OPTIONS.map((price) => (
+                      <th key={price} className="num">{price}台</th>
+                    ))}
                     <th className="num">總台數</th>
                     <th className="num">客戶總額</th>
                     <th className="num">公司抽成</th>
@@ -493,9 +494,9 @@ export default function AdminAccountingPage() {
                   {(data.employees || []).map((employee) => (
                     <tr key={employee.user_id}>
                       <td>{employee.name}</td>
-                      <td className="num">{employee.units_by_price?.[1500] ?? 0}</td>
-                      <td className="num">{employee.units_by_price?.[1300] ?? 0}</td>
-                      <td className="num">{employee.units_by_price?.[1000] ?? 0}</td>
+                      {UNIT_PRICE_OPTIONS.map((price) => (
+                        <td key={price} className="num">{employee.units_by_price?.[price] ?? 0}</td>
+                      ))}
                       <td className="num">{employee.completed_units}</td>
                       <td className="num">{formatMoney(employee.total_job_amount)}</td>
                       <td className="num">{formatMoney(employee.company_commission)}</td>
@@ -508,7 +509,7 @@ export default function AdminAccountingPage() {
                   ))}
                   {!data.employees?.length && (
                     <tr>
-                      <td colSpan={12} className="hint">本月尚無回報資料</td>
+                      <td colSpan={UNIT_PRICE_OPTIONS.length + 9} className="hint">本月尚無回報資料</td>
                     </tr>
                   )}
                 </tbody>
@@ -516,9 +517,9 @@ export default function AdminAccountingPage() {
                   <tfoot>
                     <tr>
                       <td><strong>合計</strong></td>
-                      <td className="num"><strong>{data.totals.performance_totals.units_by_price?.[1500] ?? 0}</strong></td>
-                      <td className="num"><strong>{data.totals.performance_totals.units_by_price?.[1300] ?? 0}</strong></td>
-                      <td className="num"><strong>{data.totals.performance_totals.units_by_price?.[1000] ?? 0}</strong></td>
+                      {UNIT_PRICE_OPTIONS.map((price) => (
+                        <td key={price} className="num"><strong>{data.totals.performance_totals.units_by_price?.[price] ?? 0}</strong></td>
+                      ))}
                       <td className="num"><strong>{data.totals.performance_totals.completed_units}</strong></td>
                       <td className="num"><strong>{formatMoney(data.totals.performance_totals.total_job_amount)}</strong></td>
                       <td className="num"><strong>{formatMoney(data.totals.performance_totals.company_commission)}</strong></td>

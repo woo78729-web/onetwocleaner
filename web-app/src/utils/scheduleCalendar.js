@@ -1,6 +1,6 @@
 import { getServiceAreaLabel } from './serviceAreas';
 
-export const UNIT_PRICE_OPTIONS = [1500, 1300, 1000];
+export const UNIT_PRICE_OPTIONS = [1500, 1400, 1300, 1000, 900];
 
 export const INVOICE_SURCHARGE_RATE = 0.05;
 

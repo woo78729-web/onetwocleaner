@@ -1,3 +1,5 @@
+import { UNIT_PRICE_OPTIONS } from '../utils/scheduleCalendar';
+
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('zh-TW');
 }
@@ -24,9 +26,9 @@ function LedgerTableHead({ showEmployee }) {
         <th>日期</th>
         {showEmployee && <th>師傅</th>}
         <th>客戶 / 備註</th>
-        <th className="num">1500台</th>
-        <th className="num">1300台</th>
-        <th className="num">1000台</th>
+        {UNIT_PRICE_OPTIONS.map((price) => (
+          <th key={price} className="num">{price}台</th>
+        ))}
         <th className="num">總台</th>
         <th className="num">案件金額</th>
         <th className="num">實收</th>
@@ -55,9 +57,9 @@ function LedgerTableRow({
       <td>{row.work_date}</td>
       {showEmployee && <td>{row.employee_name}</td>}
       <td className="settlement-ledger-table__detail">{detailText || '—'}</td>
-      <td className="num">{units[1500] ?? 0}</td>
-      <td className="num">{units[1300] ?? 0}</td>
-      <td className="num">{units[1000] ?? 0}</td>
+      {UNIT_PRICE_OPTIONS.map((price) => (
+        <td key={price} className="num">{units[price] ?? 0}</td>
+      ))}
       <td className="num">{row.completed_units}</td>
       <td className="num">{formatMoney(row.total_job_amount)}</td>
       <td className="num">{formatMoney(row.employee_cash_received)}</td>
@@ -84,9 +86,9 @@ function LedgerTableFoot({ totals, showEmployee }) {
       <tr>
         <td colSpan={showEmployee ? 2 : 1}><strong>合計</strong></td>
         <td />
-        <td className="num"><strong>{units[1500] ?? 0}</strong></td>
-        <td className="num"><strong>{units[1300] ?? 0}</strong></td>
-        <td className="num"><strong>{units[1000] ?? 0}</strong></td>
+        {UNIT_PRICE_OPTIONS.map((price) => (
+          <td key={price} className="num"><strong>{units[price] ?? 0}</strong></td>
+        ))}
         <td className="num"><strong>{totals.completed_units}</strong></td>
         <td className="num"><strong>{formatMoney(totals.total_job_amount)}</strong></td>
         <td className="num"><strong>{formatMoney(totals.employee_cash_received)}</strong></td>

@@ -94,13 +94,13 @@ export default function EmployeeMonthlySummaryPage() {
             <article className="employee-summary-card">
               <p className="employee-summary-card__label">應交公司（現場件）</p>
               <p className="employee-summary-card__value">{formatMoney(data.remittance_due)} 元</p>
-              <p className="hint">依 1500→600、1300→500、1000→400；有發票另加案件 5% 加價</p>
+              <p className="hint">依 1500→600、1400→550、1300→500、1000→400、900→350；有發票另加案件 5% 加價</p>
             </article>
 
             <article className="employee-summary-card">
               <p className="employee-summary-card__label">公司應退（匯款件）</p>
               <p className="employee-summary-card__value">{formatMoney(data.advance_from_company_jobs)} 元</p>
-              <p className="hint">師傅所得：1500→900、1300→800、1000→600</p>
+              <p className="hint">師傅所得：1500→900、1400→850、1300→800、1000→600、900→550</p>
             </article>
 
             <article className="employee-summary-card employee-summary-card--highlight">
