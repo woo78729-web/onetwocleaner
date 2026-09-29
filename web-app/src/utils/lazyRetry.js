@@ -13,6 +13,13 @@ export function clearChunkReload() {
   sessionStorage.removeItem(LEGACY_CHUNK_RELOAD);
 }
 
+export function reopenSpaPage() {
+  clearChunkReload();
+  const url = new URL(window.location.href);
+  url.searchParams.set('open', String(Date.now()));
+  window.location.replace(url.toString());
+}
+
 export function canAutoReloadForChunk() {
   const at = Number(sessionStorage.getItem(CHUNK_RELOAD_AT) || 0);
 

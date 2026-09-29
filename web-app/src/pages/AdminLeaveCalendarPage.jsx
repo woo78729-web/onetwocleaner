@@ -89,6 +89,7 @@ export default function AdminLeaveCalendarPage() {
   const [busy, setBusy] = useState(false);
   const visibleMonthRef = useRef(visibleMonth);
   const leaveRequestRef = useRef(0);
+  const followLeavesOnNextLoadRef = useRef(true);
   visibleMonthRef.current = visibleMonth;
 
   const loadRange = useMemo(() => {
@@ -117,6 +118,7 @@ export default function AdminLeaveCalendarPage() {
   const loadLeaves = useCallback(async ({ followLeaves = false } = {}) => {
     const requestId = leaveRequestRef.current + 1;
     leaveRequestRef.current = requestId;
+    const monthWhenRequested = format(visibleMonthRef.current, 'yyyy-MM');
     setLoading(true);
     setError('');
     setSaveErrors([]);
@@ -143,9 +145,8 @@ export default function AdminLeaveCalendarPage() {
       setBaselineDateLeaves(baseline);
       setDraftDateLeaves(new Set(baseline));
 
-      if (followLeaves) {
-        const currentMonthKey = format(visibleMonthRef.current, 'yyyy-MM');
-        const targetMonthKey = preferredLeaveMonth(baseline, currentMonthKey);
+      if (followLeaves && format(visibleMonthRef.current, 'yyyy-MM') === monthWhenRequested) {
+        const targetMonthKey = preferredLeaveMonth(baseline, monthWhenRequested);
 
         if (targetMonthKey) {
           setVisibleMonth(startOfMonth(new Date(`${targetMonthKey}-01T12:00:00`)));
@@ -171,7 +172,9 @@ export default function AdminLeaveCalendarPage() {
       return;
     }
 
-    loadLeaves({ followLeaves: true }).catch((err) => setError(err.message));
+    const followLeaves = followLeavesOnNextLoadRef.current;
+    followLeavesOnNextLoadRef.current = false;
+    loadLeaves({ followLeaves }).catch((err) => setError(err.message));
   }, [loadLeaves, selectedEmployeeId]);
 
   const weeklyLeaves = useMemo(

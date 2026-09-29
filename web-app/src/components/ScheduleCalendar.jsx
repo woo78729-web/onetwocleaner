@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { flushSync } from 'react-dom';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -18,6 +18,7 @@ import {
 } from '../utils/calendarSettings';
 
 import { createMultiDayView } from '../utils/customCalendarViews';
+import { reopenSpaPage } from '../utils/lazyRetry';
 
 import {
 
@@ -228,6 +229,9 @@ export function ScheduleCalendar({
   });
 
   const dragEnabled = Boolean(onEventDrop);
+  const workspaceRef = useRef(null);
+  const [recoverKey, setRecoverKey] = useState(0);
+  const [calendarBlank, setCalendarBlank] = useState(false);
 
   const CalendarComponent = useDragAndDropCalendar(dragEnabled);
 
@@ -281,7 +285,46 @@ export function ScheduleCalendar({
 
 
 
-  const calendarKey = `${safeDisplayDays}-${view}-${currentDate instanceof Date ? currentDate.getTime() : currentDate}`;
+  const calendarKey = `${safeDisplayDays}-${view}-${recoverKey}`;
+
+  useEffect(() => {
+    const node = workspaceRef.current;
+
+    if (!node || view === 'agenda') {
+      setCalendarBlank(false);
+      return undefined;
+    }
+
+    let timer = 0;
+
+    const check = () => {
+      const grid = node.querySelector('.rbc-time-content, .rbc-month-view');
+      const blank = Boolean(grid) && grid.clientHeight < 120;
+      setCalendarBlank((previous) => (previous === blank ? previous : blank));
+    };
+
+    timer = window.setTimeout(check, 700);
+
+    let observer;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(check, 300);
+      });
+      observer.observe(node);
+    }
+
+    return () => {
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
+  }, [calendarKey, view]);
+
+  function recoverCalendar() {
+    setCalendarBlank(false);
+    setRecoverKey((value) => value + 1);
+  }
 
 
 
@@ -513,6 +556,7 @@ export function ScheduleCalendar({
   return (
 
     <div
+      ref={workspaceRef}
       className={`schedule-workspace schedule-calendar schedule-calendar--view-${view}${colorMode === 'employee' ? ' schedule-calendar--avatars' : ''}${onDrillDown ? ' schedule-calendar--drilldown' : ''}${dragEnabled ? ' schedule-calendar--draggable' : ''}`}
     >
 
@@ -594,6 +638,19 @@ export function ScheduleCalendar({
       />
 
       </div>
+
+      {calendarBlank && (
+        <div className="schedule-calendar-recover" role="alert">
+          <p className="schedule-calendar-recover__title">行事曆沒有顯示出來</p>
+          <p className="schedule-calendar-recover__hint">瀏覽器的重新整理清不掉這個狀態。請先重畫行事曆。</p>
+          <button type="button" className="btn btn-primary" onClick={recoverCalendar}>
+            重新顯示行事曆
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={reopenSpaPage}>
+            重新開啟此頁
+          </button>
+        </div>
+      )}
 
     </div>
 

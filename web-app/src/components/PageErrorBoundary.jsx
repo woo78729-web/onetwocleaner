@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { clearChunkReload } from '../utils/lazyRetry';
+import { reopenSpaPage } from '../utils/lazyRetry';
 
 export class PageErrorBoundary extends Component {
   constructor(props) {
@@ -42,12 +42,9 @@ export class PageErrorBoundary extends Component {
             <button
               type="button"
               className="btn btn-secondary btn-pill"
-              onClick={() => {
-                clearChunkReload();
-                window.location.reload();
-              }}
+              onClick={reopenSpaPage}
             >
-              重新整理
+              重新開啟此頁
             </button>
           </div>
         </div>

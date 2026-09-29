@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { canAutoReloadForChunk, clearChunkReload, isChunkLoadError } from '../utils/lazyRetry';
+import { canAutoReloadForChunk, isChunkLoadError, reopenSpaPage } from '../utils/lazyRetry';
 
 export class AppErrorBoundary extends Component {
   constructor(props) {
@@ -36,12 +36,9 @@ export class AppErrorBoundary extends Component {
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
-                onClick={() => {
-                  clearChunkReload();
-                  window.location.reload();
-                }}
+                onClick={reopenSpaPage}
               >
-                重新整理
+                重新開啟此頁
               </button>
             </section>
           </div>
