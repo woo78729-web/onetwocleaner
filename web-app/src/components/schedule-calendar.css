@@ -1960,8 +1960,8 @@
   margin-left: 2px;
   margin-right: 2px;
   max-width: calc(100% - 4px);
-  container-type: size;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event .rbc-event-content {
@@ -1971,6 +1971,7 @@
   overflow: hidden;
   flex: 1 1 auto;
   align-self: stretch;
+  container-type: size;
 }
 
 .schedule-workspace.schedule-calendar .rbc-event .rbc-event-content {
