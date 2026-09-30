@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HOUR_HEIGHT_MAX, HOUR_HEIGHT_MIN } from '../utils/calendarSettings';
 
 const VIEW_OPTIONS = [
   { value: 'month', label: '月' },
@@ -128,6 +129,19 @@ export function CalendarSettingsPanel({
               </select>
             </label>
 
+            <label className="field calendar-settings__hour-height">
+              <span className="field-label">時間軸間距（一小時 {settings.hourHeight ?? 88} px）</span>
+              <input
+                type="range"
+                className="field-control calendar-settings__range"
+                min={HOUR_HEIGHT_MIN}
+                max={HOUR_HEIGHT_MAX}
+                step="8"
+                value={settings.hourHeight ?? 88}
+                onChange={(event) => update({ hourHeight: Number(event.target.value) })}
+              />
+            </label>
+
             {showColorMode && (
               <label className="field">
                 <span className="field-label">行程著色</span>
@@ -143,7 +157,7 @@ export function CalendarSettingsPanel({
             )}
           </div>
 
-          <p className="hint calendar-settings__hint">預設顯示 5:00–24:00；設定會保存在此瀏覽器。</p>
+          <p className="hint calendar-settings__hint">時間軸間距愈高，一小時的行程愈容易看清地址。設定會保存在此瀏覽器。</p>
         </div>
       )}
     </div>

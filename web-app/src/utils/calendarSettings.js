@@ -6,9 +6,23 @@ export const DEFAULT_CALENDAR_SETTINGS = {
   startHour: 5,
   endHour: 24,
   slotMinutes: 30,
+  hourHeight: 88,
   colorMode: 'source',
   displayDays: 7,
 };
+
+export const HOUR_HEIGHT_MIN = 56;
+export const HOUR_HEIGHT_MAX = 160;
+
+export function clampHourHeight(value) {
+  const height = Number(value);
+
+  if (!Number.isFinite(height)) {
+    return DEFAULT_CALENDAR_SETTINGS.hourHeight;
+  }
+
+  return Math.min(HOUR_HEIGHT_MAX, Math.max(HOUR_HEIGHT_MIN, Math.round(height)));
+}
 
 export function loadCalendarSettings() {
   try {
@@ -23,6 +37,7 @@ export function loadCalendarSettings() {
       ...DEFAULT_CALENDAR_SETTINGS,
       ...parsed,
       displayDays: Math.min(7, Math.max(1, Number(parsed.displayDays) || DEFAULT_CALENDAR_SETTINGS.displayDays)),
+      hourHeight: clampHourHeight(parsed.hourHeight ?? DEFAULT_CALENDAR_SETTINGS.hourHeight),
       // Always Monday — ignore any previously saved Sunday preference.
       weekStartsOn: 1,
     };

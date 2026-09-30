@@ -11,6 +11,8 @@ import {
 
   DEFAULT_CALENDAR_SETTINGS,
 
+  clampHourHeight,
+
   getTimeslots,
 
   hourToCalendarDate,
@@ -28,6 +30,7 @@ import {
 
   getScheduleEventClassName,
 
+  formatChineseTimeValue,
   getScheduleEventStyle,
 
 } from '../utils/scheduleCalendar';
@@ -528,6 +531,12 @@ export function ScheduleCalendar({
     return new Date(1970, 0, 1, scrollHour, now.getMinutes(), 0);
   }, [settings.endHour, settings.startHour]);
 
+  const formats = useMemo(() => ({
+    timeGutterFormat: (date) => formatChineseTimeValue(
+      `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+    ),
+  }), []);
+
   function handleViewChange(nextView) {
     setView(nextView);
     onViewChange?.(nextView);
@@ -558,6 +567,7 @@ export function ScheduleCalendar({
     <div
       ref={workspaceRef}
       className={`schedule-workspace schedule-calendar schedule-calendar--view-${view}${colorMode === 'employee' ? ' schedule-calendar--avatars' : ''}${onDrillDown ? ' schedule-calendar--drilldown' : ''}${dragEnabled ? ' schedule-calendar--draggable' : ''}`}
+      style={{ '--calendar-hour-height': `${clampHourHeight(settings.hourHeight)}px` }}
     >
 
       <div
@@ -574,6 +584,8 @@ export function ScheduleCalendar({
         culture="zh-TW"
 
         messages={messages}
+
+        formats={formats}
 
         events={events}
 
