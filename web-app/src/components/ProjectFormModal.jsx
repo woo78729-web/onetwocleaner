@@ -275,8 +275,6 @@ export function ProjectFormModal({
               selectedValues={form.service_area}
               onChange={(value) => handleChange({ service_area: value || '' })}
               showClear={false}
-              gridClassName="option-chip-group"
-              tileClassName="option-chip option-chip--area"
             />
           </div>
 

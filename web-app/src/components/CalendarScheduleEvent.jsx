@@ -4,9 +4,26 @@ import {
 } from '../utils/scheduleCalendar';
 import { ScheduleTechnicianBadge } from './ScheduleTechnicianBadge';
 
+function eventDensityClass(event) {
+  const start = event?.start instanceof Date ? event.start.getTime() : 0;
+  const end = event?.end instanceof Date ? event.end.getTime() : 0;
+  const minutes = (end - start) / 60000;
+
+  if (minutes > 0 && minutes < 50) {
+    return 'calendar-event-detail--tiny';
+  }
+
+  if (minutes < 110) {
+    return 'calendar-event-detail--short';
+  }
+
+  return '';
+}
+
 export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedSchedules = [] }) {
   const schedule = event.resource;
   const compact = view === 'month';
+  const densityClass = eventDensityClass(event);
 
   if (schedule?.type === 'leave') {
     if (compact) {
@@ -19,7 +36,7 @@ export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedS
     }
 
     return (
-      <div className="calendar-event-detail calendar-event-detail--leave">
+      <div className={`calendar-event-detail calendar-event-detail--leave ${densityClass}`.trim()}>
         <ScheduleTechnicianBadge
           user={schedule.user}
           size="xs"
@@ -44,7 +61,7 @@ export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedS
   }
 
   return (
-    <div className="calendar-event-detail" data-schedule-id={schedule.id} title={buildScheduleCardLine(schedule, { hidePrice, relatedSchedules })}>
+    <div className={`calendar-event-detail ${densityClass}`.trim()} data-schedule-id={schedule.id} title={buildScheduleCardLine(schedule, { hidePrice, relatedSchedules })}>
       <ScheduleTechnicianBadge
         user={schedule.user}
         size="xs"

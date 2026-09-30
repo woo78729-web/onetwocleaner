@@ -1069,9 +1069,11 @@ export function buildScheduleCardLine(schedule, { hidePrice = false, relatedSche
   const customerName = String(schedule.customer_name || '').trim() || '客';
   const address = String(schedule.customer_address || '').trim();
   const phone = String(schedule.customer_phone || '').trim().replace(/\s+/g, '');
+  const areaLabel = getServiceAreaLabel(schedule.service_area);
   const unitsPrice = buildScheduleUnitsPriceTag(schedule, { hidePrice, relatedSchedules });
   const projectTag = schedule?.cleaning_project_id ? '[專]' : '';
-  const parts = [`${projectTag}${customerName})${address}`];
+  const areaPrefix = areaLabel && areaLabel !== '未設定' ? `[${areaLabel}]` : '';
+  const parts = [`${projectTag}${areaPrefix}${customerName})${address}`];
 
   if (phone) {
     parts.push(phone);

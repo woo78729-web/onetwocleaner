@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   SERVICE_AREA_REGIONS,
   findRegionKeyForValues,
+  findTabKeyForValue,
+  getRegionTabs,
+  getServiceAreaLabel,
   sortAreasByRoute,
 } from '../utils/serviceAreas';
 
@@ -31,6 +34,7 @@ export function ServiceAreaPicker({
   );
 
   const [expandedRegion, setExpandedRegion] = useState(() => findRegionKeyForValues(values));
+  const [activeTab, setActiveTab] = useState(() => findTabKeyForValue(values[0]) || '');
 
   useEffect(() => {
     if (values.length === 0) {
@@ -42,13 +46,25 @@ export function ServiceAreaPicker({
     if (regionKey) {
       setExpandedRegion(regionKey);
     }
-  }, [values]);
+
+    if (mode === 'single') {
+      const tabKey = findTabKeyForValue(values[0]);
+
+      if (tabKey) {
+        setActiveTab(tabKey);
+      }
+    }
+  }, [mode, values]);
 
   function toggleRegion(regionKey) {
     const region = SERVICE_AREA_REGIONS.find((item) => item.key === regionKey);
     const willExpand = expandedRegion !== regionKey;
 
     setExpandedRegion(willExpand ? regionKey : null);
+    if (willExpand) {
+      const selectedInRegion = region?.areas.find((area) => values.includes(area.value));
+      setActiveTab(selectedInRegion?.tab || getRegionTabs(regionKey)[0]?.key || '');
+    }
 
     // 點縣市後若尚未勾選該縣任何區域，自動全選以便立刻顯示空檔
     if (
@@ -80,15 +96,17 @@ export function ServiceAreaPicker({
     onChange?.([...values, areaValue]);
   }
 
-  function selectAllInExpandedRegion() {
+  function selectAllInExpandedTab() {
     const region = SERVICE_AREA_REGIONS.find((item) => item.key === expandedRegion);
 
     if (!region || mode !== 'multiple') {
       return;
     }
 
-    const regionValues = region.areas.map((area) => area.value);
-    onChange?.([...new Set([...values, ...regionValues])]);
+    const tabValues = region.areas
+      .filter((area) => !currentTab || area.tab === currentTab)
+      .map((area) => area.value);
+    onChange?.([...new Set([...values, ...tabValues])]);
   }
 
   function clearExpandedRegion() {
@@ -106,10 +124,21 @@ export function ServiceAreaPicker({
     onChange?.(mode === 'single' ? '' : []);
   }
 
+  const districtTabs = useMemo(() => getRegionTabs(expandedRegion), [expandedRegion]);
+  const currentTab = districtTabs.some((tab) => tab.key === activeTab)
+    ? activeTab
+    : (districtTabs[0]?.key || '');
+
   const expandedAreas = useMemo(() => {
     const region = SERVICE_AREA_REGIONS.find((item) => item.key === expandedRegion);
-    return region ? sortAreasByRoute(region.areas) : [];
-  }, [expandedRegion]);
+    const areas = region ? sortAreasByRoute(region.areas) : [];
+
+    if (!currentTab || districtTabs.length <= 1) {
+      return areas;
+    }
+
+    return areas.filter((area) => area.tab === currentTab);
+  }, [currentTab, districtTabs.length, expandedRegion]);
 
   const expandedRegionLabel = SERVICE_AREA_REGIONS.find((item) => item.key === expandedRegion)?.label;
 
@@ -160,9 +189,9 @@ export function ServiceAreaPicker({
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={selectAllInExpandedRegion}
+                  onClick={selectAllInExpandedTab}
                 >
-                  全選
+                  全選此頁
                 </button>
                 <button
                   type="button"
@@ -174,6 +203,31 @@ export function ServiceAreaPicker({
               </div>
             )}
           </div>
+          {districtTabs.length > 1 && (
+            <div className="service-area-picker__tabs" role="tablist" aria-label="區域分頁">
+              {districtTabs.map((tab) => {
+                const tabCount = SERVICE_AREA_REGIONS
+                  .find((item) => item.key === expandedRegion)
+                  ?.areas.filter((area) => area.tab === tab.key && values.includes(area.value)).length || 0;
+
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={currentTab === tab.key}
+                    className={`service-area-picker__tab${currentTab === tab.key ? ' is-active' : ''}`}
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    <span>{tab.label}</span>
+                    {tabCount > 0 && (
+                      <span className="service-area-picker__tab-count">{tabCount}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className={`service-area-picker__districts ${gridClassName}`} role="group" aria-label="區域選擇">
             {expandedAreas.map((area) => {
@@ -194,6 +248,9 @@ export function ServiceAreaPicker({
               );
             })}
           </div>
+          {mode === 'single' && values[0] && (
+            <p className="service-area-picker__selected-hint">已選：{getServiceAreaLabel(values[0])}</p>
+          )}
         </div>
       )}
     </div>
