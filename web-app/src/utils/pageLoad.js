@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
+import { isAbortError } from '../api/client';
 
 function wait(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
 }
+
+export { isAbortError };
 
 export async function loadWithRetry(task, { attempts = 3, delayMs = 700 } = {}) {
   let lastError;
@@ -15,7 +18,7 @@ export async function loadWithRetry(task, { attempts = 3, delayMs = 700 } = {}) 
     } catch (error) {
       lastError = error;
 
-      if (attempt === attempts - 1) {
+      if (isAbortError(error) || attempt === attempts - 1) {
         break;
       }
 

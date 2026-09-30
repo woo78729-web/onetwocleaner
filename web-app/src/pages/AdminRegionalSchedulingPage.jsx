@@ -12,7 +12,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canAccess } from '../utils/permissions';
 import { loadAvailabilityDays } from '../utils/serviceAreas';
-import { loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
+import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
 import {
   applyPriceCalculation,
   buildSchedulePayload,
@@ -89,7 +89,7 @@ export default function AdminRegionalSchedulingPage() {
       setAllSchedules(payload.schedules);
       setLeaves(payload.leaves);
     } catch (err) {
-      if (scheduleRequestRef.current !== requestId) {
+      if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
         return;
       }
 

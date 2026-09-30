@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
+window.__spaStarted = true;
 sessionStorage.removeItem('spa-chunk-reload');
 
 createRoot(document.getElementById('root')).render(

@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../utils/assetUrl';
 import { getMobileTabItems, getNavStructure } from '../utils/navItems';
 import { getRoleLabel } from '../utils/permissions';
 import { UnitChangeAlertModal } from './UnitChangeAlertModal';
-import { api } from '../api/client';
+import { abortPageRequests, api } from '../api/client';
+
+const LayoutTitleContext = createContext(null);
 
 function NavItemLink({ item, onNavigate, className = 'nav-link' }) {
   return (
@@ -118,7 +120,46 @@ function MobileNavSection({ entry, onNavigate }) {
   );
 }
 
+export function PersistentLayout() {
+  const location = useLocation();
+  const [title, setTitleState] = useState('');
+  const setTitle = useCallback((nextTitle) => {
+    setTitleState((current) => (current === nextTitle ? current : nextTitle));
+  }, []);
+  const contextValue = useMemo(() => ({ setTitle }), [setTitle]);
+
+  useEffect(() => () => {
+    abortPageRequests();
+  }, [location.pathname]);
+
+  return (
+    <LayoutTitleContext.Provider value={contextValue}>
+      <LayoutFrame title={title}>
+        <Suspense fallback={<p className="hint">載入頁面中...</p>}>
+          <Outlet />
+        </Suspense>
+      </LayoutFrame>
+    </LayoutTitleContext.Provider>
+  );
+}
+
 export function Layout({ title, children }) {
+  const ctx = useContext(LayoutTitleContext);
+
+  useLayoutEffect(() => {
+    if (ctx) {
+      ctx.setTitle(title || '');
+    }
+  }, [ctx, title]);
+
+  if (ctx) {
+    return children;
+  }
+
+  return <LayoutFrame title={title}>{children}</LayoutFrame>;
+}
+
+function LayoutFrame({ title, children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -138,16 +179,30 @@ export function Layout({ title, children }) {
       return;
     }
 
+    let cancelled = false;
+
     api.getUnitChangeAlerts()
       .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
         const items = result.data?.items || [];
         setUnitChangeAlerts(items);
         setUnitChangeAlertOpen(items.length > 0);
       })
       .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
         setUnitChangeAlerts([]);
         setUnitChangeAlertOpen(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, isAdmin]);
 
   async function closeUnitChangeAlerts() {

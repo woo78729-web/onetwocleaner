@@ -47,6 +47,25 @@
         font-size: 14px;
         color: #3d4f60;
       }
+      .app-boot__retry {
+        display: none;
+        margin: 16px auto 0;
+        min-height: 40px;
+        padding: 8px 16px;
+        border: 0;
+        border-radius: 999px;
+        background: #007bff;
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .app-boot.is-failed .app-boot__retry {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
     </style>
   </head>
   <body>
@@ -55,9 +74,62 @@
         <div class="app-boot__card">
           <p class="app-boot__title">萬兔專業冷氣清洗</p>
           <p class="app-boot__hint">系統載入中...</p>
+          <button type="button" class="app-boot__retry" onclick="location.reload()">重新開啟</button>
         </div>
       </div>
     </div>
+    <script>
+      (function () {
+        var reloadKey = 'spa-boot-reload-at';
+
+        function showBootFailure(message) {
+          var boot = document.querySelector('.app-boot');
+          var hint = document.querySelector('.app-boot__hint');
+
+          if (!boot || window.__spaStarted) {
+            return;
+          }
+
+          boot.classList.add('is-failed');
+
+          if (hint) {
+            hint.textContent = message || '系統沒有順利打開，請按重新開啟。';
+          }
+        }
+
+        function reopenOnce() {
+          if (window.__spaStarted) {
+            return;
+          }
+
+          var at = Number(sessionStorage.getItem(reloadKey) || 0);
+
+          if (!at || Date.now() - at > 20000) {
+            sessionStorage.setItem(reloadKey, String(Date.now()));
+            var url = new URL(window.location.href);
+            url.searchParams.set('boot', String(Date.now()));
+            window.location.replace(url.toString());
+            return;
+          }
+
+          showBootFailure();
+        }
+
+        window.addEventListener('error', function (event) {
+          var target = event.target;
+
+          if (target && target.tagName === 'SCRIPT') {
+            reopenOnce();
+          }
+        }, true);
+
+        window.setTimeout(function () {
+          if (!window.__spaStarted && document.querySelector('.app-boot')) {
+            reopenOnce();
+          }
+        }, 8000);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

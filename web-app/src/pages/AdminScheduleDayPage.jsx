@@ -12,7 +12,7 @@ import { ScheduleTechnicianBadge } from '../components/ScheduleTechnicianBadge';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canManageSchedulePricing } from '../utils/permissions';
-import { loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
+import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
 import {
   buildSchedulePayload,
   buildSchedulePayloads,
@@ -153,7 +153,7 @@ export default function AdminScheduleDayPage() {
       setSchedules(payload.schedules);
       setLeaves(payload.leaves);
     } catch (err) {
-      if (scheduleRequestRef.current !== requestId) {
+      if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
         return;
       }
 

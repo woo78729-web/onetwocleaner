@@ -42,6 +42,14 @@ server {
 
     error_page 404 /index.php;
 
+    # 靜態檔缺失必須維持 404。若被改寫成 index.php，瀏覽器會把網頁當程式執行，畫面就停在「系統載入中」。
+    location ~* \.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|txt)$ {
+        try_files $uri =404;
+        error_page 404 =404;
+        access_log off;
+        log_not_found off;
+    }
+
     location ~ \.php$ {
         try_files $uri =404;
         fastcgi_split_path_info ^(.+\.php)(/.*)$;

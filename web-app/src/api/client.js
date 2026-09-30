@@ -65,6 +65,63 @@ class ApiError extends Error {
   }
 }
 
+const PERSIST_GET_PATHS = new Set([
+  '/me',
+  '/admin/remittance-tracking/alerts',
+  '/admin/reports/unit-change-alerts',
+]);
+
+let pageRequestController = new AbortController();
+
+export function abortPageRequests() {
+  pageRequestController.abort();
+  pageRequestController = new AbortController();
+}
+
+export function getPageRequestSignal() {
+  return pageRequestController.signal;
+}
+
+export function isAbortError(error) {
+  return error?.name === 'AbortError' || error?.code === 20;
+}
+
+function mergeAbortSignals(signals) {
+  const active = signals.filter(Boolean);
+
+  if (active.length === 0) {
+    return { signal: undefined, cleanup: () => {} };
+  }
+
+  if (active.length === 1) {
+    return { signal: active[0], cleanup: () => {} };
+  }
+
+  const controller = new AbortController();
+  const cleanups = [];
+
+  const onAbort = () => {
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  };
+
+  for (const signal of active) {
+    if (signal.aborted) {
+      onAbort();
+      return { signal: controller.signal, cleanup: () => {} };
+    }
+
+    signal.addEventListener('abort', onAbort);
+    cleanups.push(() => signal.removeEventListener('abort', onAbort));
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => cleanups.forEach((fn) => fn()),
+  };
+}
+
 class AcCleaningApi {
   constructor(baseUrl = API_BASE_URL) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -102,7 +159,7 @@ class AcCleaningApi {
     window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
   }
 
-  async request(method, path, { body, params, raw = false } = {}) {
+  async request(method, path, { body, params, raw = false, persist = false } = {}) {
     const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
     const token = this.syncTokenFromStorage();
 
@@ -126,6 +183,12 @@ class AcCleaningApi {
       headers.Authorization = `Bearer ${token}`;
     }
 
+    const keepAlive = persist || method !== 'GET' || PERSIST_GET_PATHS.has(path);
+    const { signal, cleanup } = mergeAbortSignals([
+      AbortSignal.timeout(30000),
+      keepAlive ? null : getPageRequestSignal(),
+    ]);
+
     let response;
 
     try {
@@ -133,14 +196,20 @@ class AcCleaningApi {
         method,
         headers,
         body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
-        signal: AbortSignal.timeout(30000),
+        signal,
       });
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+
       if (error?.name === 'TimeoutError') {
         throw new ApiError('伺服器回應逾時，請稍後再試', 0, null);
       }
 
       throw new ApiError('無法連線伺服器，請先雙擊執行「在家一鍵啟動.bat」', 0, null);
+    } finally {
+      cleanup();
     }
 
     if (raw) {

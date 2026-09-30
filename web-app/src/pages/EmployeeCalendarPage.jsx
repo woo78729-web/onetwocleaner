@@ -18,7 +18,7 @@ import {
   formatScheduleDateLabel,
   sortSchedulesWithOverduePinned,
 } from '../utils/scheduleCalendar';
-import { loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
+import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
 import '../components/schedule-calendar.css';
 
 function todayDateString() {
@@ -146,7 +146,7 @@ export default function EmployeeCalendarPage() {
       setLeaves(payload.leaves);
       setMonthSchedules(payload.schedules);
     } catch (err) {
-      if (calendarRequestRef.current !== requestId) {
+      if (calendarRequestRef.current !== requestId || isAbortError(err)) {
         return;
       }
 

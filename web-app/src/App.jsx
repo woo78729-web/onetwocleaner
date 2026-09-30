@@ -7,6 +7,7 @@ import { EmployeeOnboardingRoute } from './components/EmployeeOnboardingRoute';
 import LoginPage from './pages/LoginPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import { RemittanceAlertHost } from './components/RemittanceAlertHost';
+import { PersistentLayout } from './components/Layout';
 import { lazyRetry } from './utils/lazyRetry';
 
 const AdminReportsPage = lazy(lazyRetry(() => import('./pages/AdminReportsPage')));
@@ -49,66 +50,70 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/google-callback" element={<GoogleAuthCallbackPage />} />
 
-              <Route element={<ProtectedRoute permission="reports.view" />}>
-                <Route path="/admin" element={<AdminReportsPage />} />
-                <Route path="/finance" element={<AdminReportsPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="accounting.manage" />}>
-                <Route path="/admin/accounting" element={<AdminAccountingPage />} />
-                <Route path="/admin/performance" element={<AdminPerformancePage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="staff.manage" />}>
-                <Route path="/admin/staff" element={<AdminStaffPage />} />
-                <Route path="/admin/employees" element={<Navigate to="/admin/staff" replace />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="schedules.manage" />}>
-                <Route path="/admin/schedules" element={<AdminSchedulesPage />} />
-                <Route path="/admin/regional-scheduling" element={<AdminRegionalSchedulingPage />} />
-                <Route path="/admin/schedules/day/:date" element={<AdminScheduleDayPage />} />
-                <Route path="/admin/leaves" element={<AdminLeaveCalendarPage />} />
-                <Route path="/admin/projects" element={<AdminProjectsPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="phone.lookup" />}>
-                <Route path="/admin/phone-lookup" element={<PhoneLookupPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="maintenance.manage" />}>
-                <Route path="/admin/emergency-maintenance" element={<EmergencyMaintenancePage />} />
-                <Route path="/admin/maintenance" element={<MaintenanceRecordsPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="mail.tracking" />}>
-                <Route path="/admin/mail-tracking" element={<MailTrackingPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute permission="remittance.track" />}>
-                <Route path="/admin/remittance-tracking" element={<RemittanceTrackingPage />} />
-              </Route>
-
               <Route element={<ProtectedRoute permission="employee.schedules" />}>
                 <Route path="/employee/onboarding" element={<EmployeeOnboardingPage />} />
               </Route>
 
-              <Route element={<EmployeeOnboardingRoute />}>
-                <Route element={<ProtectedRoute permission="employee.schedules" />}>
-                  <Route path="/employee" element={<EmployeeTodayTasksPage />} />
-                  <Route path="/employee/calendar" element={<EmployeeCalendarPage />} />
-                  <Route path="/employee/leaves" element={<EmployeeLeavePage />} />
-                  <Route path="/employee/reports" element={<EmployeeDailyReportPage />} />
-                  <Route path="/employee/reports/history" element={<EmployeeReportHistoryPage />} />
-                  <Route path="/employee/summary" element={<EmployeeMonthlySummaryPage />} />
-                  <Route path="/employee/settings" element={<EmployeeSettingsPage />} />
-                  <Route path="/employee/rules" element={<EmployeeRulesPage />} />
-                </Route>
-              </Route>
+              <Route element={<ProtectedRoute />}>
+                <Route element={<PersistentLayout />}>
+                  <Route element={<ProtectedRoute permission="reports.view" />}>
+                    <Route path="/admin" element={<AdminReportsPage />} />
+                    <Route path="/finance" element={<AdminReportsPage />} />
+                  </Route>
 
-              <Route element={<EmployeeOnboardingRoute />}>
-                <Route element={<ProtectedRoute permission="employee.maintenance" />}>
-                  <Route path="/employee/maintenance" element={<EmployeeMaintenanceReportPage />} />
+                  <Route element={<ProtectedRoute permission="accounting.manage" />}>
+                    <Route path="/admin/accounting" element={<AdminAccountingPage />} />
+                    <Route path="/admin/performance" element={<AdminPerformancePage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="staff.manage" />}>
+                    <Route path="/admin/staff" element={<AdminStaffPage />} />
+                    <Route path="/admin/employees" element={<Navigate to="/admin/staff" replace />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="schedules.manage" />}>
+                    <Route path="/admin/schedules" element={<AdminSchedulesPage />} />
+                    <Route path="/admin/regional-scheduling" element={<AdminRegionalSchedulingPage />} />
+                    <Route path="/admin/schedules/day/:date" element={<AdminScheduleDayPage />} />
+                    <Route path="/admin/leaves" element={<AdminLeaveCalendarPage />} />
+                    <Route path="/admin/projects" element={<AdminProjectsPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="phone.lookup" />}>
+                    <Route path="/admin/phone-lookup" element={<PhoneLookupPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="maintenance.manage" />}>
+                    <Route path="/admin/emergency-maintenance" element={<EmergencyMaintenancePage />} />
+                    <Route path="/admin/maintenance" element={<MaintenanceRecordsPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="mail.tracking" />}>
+                    <Route path="/admin/mail-tracking" element={<MailTrackingPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute permission="remittance.track" />}>
+                    <Route path="/admin/remittance-tracking" element={<RemittanceTrackingPage />} />
+                  </Route>
+
+                  <Route element={<EmployeeOnboardingRoute />}>
+                    <Route element={<ProtectedRoute permission="employee.schedules" />}>
+                      <Route path="/employee" element={<EmployeeTodayTasksPage />} />
+                      <Route path="/employee/calendar" element={<EmployeeCalendarPage />} />
+                      <Route path="/employee/leaves" element={<EmployeeLeavePage />} />
+                      <Route path="/employee/reports" element={<EmployeeDailyReportPage />} />
+                      <Route path="/employee/reports/history" element={<EmployeeReportHistoryPage />} />
+                      <Route path="/employee/summary" element={<EmployeeMonthlySummaryPage />} />
+                      <Route path="/employee/settings" element={<EmployeeSettingsPage />} />
+                      <Route path="/employee/rules" element={<EmployeeRulesPage />} />
+                    </Route>
+                  </Route>
+
+                  <Route element={<EmployeeOnboardingRoute />}>
+                    <Route element={<ProtectedRoute permission="employee.maintenance" />}>
+                      <Route path="/employee/maintenance" element={<EmployeeMaintenanceReportPage />} />
+                    </Route>
+                  </Route>
                 </Route>
               </Route>
 
