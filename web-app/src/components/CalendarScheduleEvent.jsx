@@ -24,7 +24,6 @@ export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedS
           user={schedule.user}
           size="xs"
           showName
-          showAvatar={false}
           className="calendar-event-detail__technician"
         />
         <p className="calendar-event-detail__line">休假</p>
@@ -50,7 +49,6 @@ export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedS
         user={schedule.user}
         size="xs"
         showName
-        showAvatar={false}
         className="calendar-event-detail__technician"
       />
       <p className="calendar-event-detail__line">{buildScheduleCardLine(schedule, { hidePrice, relatedSchedules })}</p>

@@ -6,18 +6,18 @@ export const DEFAULT_CALENDAR_SETTINGS = {
   startHour: 5,
   endHour: 24,
   slotMinutes: 30,
-  hourHeight: 88,
+  hourHeight: 32,
   colorMode: 'source',
   displayDays: 7,
 };
 
-export const HOUR_HEIGHT_MIN = 56;
-export const HOUR_HEIGHT_MAX = 160;
+export const HOUR_HEIGHT_MIN = 24;
+export const HOUR_HEIGHT_MAX = 48;
 
 export function clampHourHeight(value) {
   const height = Number(value);
 
-  if (!Number.isFinite(height)) {
+  if (!Number.isFinite(height) || height > HOUR_HEIGHT_MAX) {
     return DEFAULT_CALENDAR_SETTINGS.hourHeight;
   }
 

@@ -30,7 +30,6 @@ import {
 
   getScheduleEventClassName,
 
-  formatChineseTimeValue,
   getScheduleEventStyle,
 
 } from '../utils/scheduleCalendar';
@@ -531,11 +530,6 @@ export function ScheduleCalendar({
     return new Date(1970, 0, 1, scrollHour, now.getMinutes(), 0);
   }, [settings.endHour, settings.startHour]);
 
-  const formats = useMemo(() => ({
-    timeGutterFormat: (date) => formatChineseTimeValue(
-      `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
-    ),
-  }), []);
 
   function handleViewChange(nextView) {
     setView(nextView);
@@ -584,8 +578,6 @@ export function ScheduleCalendar({
         culture="zh-TW"
 
         messages={messages}
-
-        formats={formats}
 
         events={events}
 

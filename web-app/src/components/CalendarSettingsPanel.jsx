@@ -130,14 +130,14 @@ export function CalendarSettingsPanel({
             </label>
 
             <label className="field calendar-settings__hour-height">
-              <span className="field-label">時間軸間距（一小時 {settings.hourHeight ?? 88} px）</span>
+              <span className="field-label">時間軸間距（一小時至少 {settings.hourHeight ?? 32} px）</span>
               <input
                 type="range"
                 className="field-control calendar-settings__range"
                 min={HOUR_HEIGHT_MIN}
                 max={HOUR_HEIGHT_MAX}
-                step="8"
-                value={settings.hourHeight ?? 88}
+                step="2"
+                value={settings.hourHeight ?? 32}
                 onChange={(event) => update({ hourHeight: Number(event.target.value) })}
               />
             </label>
@@ -157,7 +157,7 @@ export function CalendarSettingsPanel({
             )}
           </div>
 
-          <p className="hint calendar-settings__hint">時間軸間距愈高，一小時的行程愈容易看清地址。設定會保存在此瀏覽器。</p>
+          <p className="hint calendar-settings__hint">格子比例與東東相同；字會換行，不會擠在一起。設定會保存在此瀏覽器。</p>
         </div>
       )}
     </div>
