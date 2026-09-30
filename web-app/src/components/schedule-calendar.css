@@ -2243,6 +2243,27 @@
   display: none;
 }
 
+.calendar-event-detail--short {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-event-detail--short .calendar-event-detail__technician {
+  max-width: none;
+}
+
+.calendar-event-detail--short .calendar-event-detail__technician .schedule-technician-badge__name {
+  max-width: none;
+  white-space: nowrap;
+}
+
+.calendar-event-detail--short .calendar-event-detail__line {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
 .calendar-event-detail--short .calendar-event-detail__time {
   display: none;
 }
