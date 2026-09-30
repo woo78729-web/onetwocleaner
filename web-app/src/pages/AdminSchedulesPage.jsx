@@ -87,11 +87,18 @@ export default function AdminSchedulesPage() {
   const scheduleRequestRef = useRef(0);
 
   const schedules = useMemo(() => {
-    if (!selectedAreas.length) {
-      return allSchedules;
+    let next = allSchedules;
+
+    if (selectedEmployeeId) {
+      next = next.filter((schedule) => String(schedule.user_id) === String(selectedEmployeeId));
     }
-    return allSchedules.filter((schedule) => selectedAreas.includes(schedule.service_area));
-  }, [allSchedules, selectedAreas]);
+
+    if (!selectedAreas.length) {
+      return next;
+    }
+
+    return next.filter((schedule) => selectedAreas.includes(schedule.service_area));
+  }, [allSchedules, selectedAreas, selectedEmployeeId]);
 
   const loadEmployees = useCallback(async () => {
     const result = await api.getEmployees();
@@ -100,7 +107,6 @@ export default function AdminSchedulesPage() {
 
   const loadSchedules = useCallback(async (
     anchor = currentDate,
-    employeeId = selectedEmployeeId,
     days = lookaheadDays,
     visibleDayCount = displayDays,
   ) => {
@@ -123,7 +129,6 @@ export default function AdminSchedulesPage() {
           api.getCalendarSchedules({
             date_from,
             date_to,
-            user_id: employeeId || undefined,
           }),
           api.getPlanningLeaves(calendarRange),
         ]);
@@ -147,18 +152,18 @@ export default function AdminSchedulesPage() {
 
       setError(err.message);
     }
-  }, [currentDate, selectedEmployeeId, lookaheadDays, displayDays]);
+  }, [currentDate, lookaheadDays, displayDays]);
 
   useEffect(() => {
     loadEmployees().catch((err) => setError(err.message));
   }, [loadEmployees]);
 
   useEffect(() => {
-    loadSchedules(currentDate, selectedEmployeeId, lookaheadDays, displayDays).catch((err) => setError(err.message));
-  }, [currentDate, selectedEmployeeId, lookaheadDays, displayDays, loadSchedules]);
+    loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
+  }, [currentDate, lookaheadDays, displayDays, loadSchedules]);
 
   useRefreshOnVisible(() => {
-    loadSchedules(currentDate, selectedEmployeeId, lookaheadDays, displayDays).catch((err) => setError(err.message));
+    loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
   });
 
   useEffect(() => {
@@ -336,7 +341,7 @@ export default function AdminSchedulesPage() {
         setPendingMailRedirect(payloads.some((item) => scheduleHasMailTrackingItem(item)));
       }
       setSuccessSummary(summaryPayload);
-      loadSchedules(currentDate, selectedEmployeeId).catch((err) => setError(err.message));
+      loadSchedules(currentDate).catch((err) => setError(err.message));
     } catch (err) {
       setError(err.message);
       window.alert(err.message);
@@ -350,7 +355,7 @@ export default function AdminSchedulesPage() {
       await api.deleteSchedule(editId);
       setMessage('行程刪除成功');
       closeModal();
-      await loadSchedules(currentDate, selectedEmployeeId);
+      await loadSchedules(currentDate);
     } catch (err) {
       setError(err.message);
     }
@@ -375,7 +380,7 @@ export default function AdminSchedulesPage() {
       await api.deleteSchedule(schedule.id);
       setMessage('行程刪除成功');
       closeSnapshot();
-      await loadSchedules(currentDate, selectedEmployeeId);
+      await loadSchedules(currentDate);
     } catch (err) {
       setError(err.message);
     }

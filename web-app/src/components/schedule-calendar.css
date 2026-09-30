@@ -92,7 +92,7 @@
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
-  align-items: stretch;
+  align-items: flex-start;
   flex-direction: row;
   overflow-y: auto !important;
   overflow-x: hidden;
@@ -105,15 +105,16 @@
   flex: none;
   width: 64px;
   min-width: 64px;
+  min-height: 100%;
+  height: auto;
 }
 
 .schedule-workspace.schedule-calendar .rbc-time-content > .rbc-day-slot {
   flex: 1 1 0;
   width: 0;
   min-width: 0;
-}
-
-.schedule-workspace.schedule-calendar .rbc-time-content > .rbc-day-slot {
+  min-height: 100%;
+  height: auto;
   position: relative;
   isolation: isolate;
 }
@@ -148,7 +149,7 @@
 }
 
 .schedule-workspace.schedule-calendar .rbc-timeslot-group {
-  min-height: 64px;
+  min-height: 32px;
   border-color: #f1f3f4;
 }
 
@@ -1483,7 +1484,7 @@
   }
 
   .schedule-workspace.schedule-calendar .rbc-timeslot-group {
-    min-height: 48px;
+    min-height: 24px;
   }
 
   .schedule-calendar--draggable .rbc-event {
@@ -2211,7 +2212,7 @@
   overflow: hidden;
 }
 
-@container (min-height: 110px) {
+@container (min-height: 56px) {
   .calendar-event-detail__line {
     white-space: normal;
     display: -webkit-box;
@@ -2235,7 +2236,7 @@
   text-overflow: ellipsis;
 }
 
-@container (max-height: 42px) {
+@container (max-height: 28px) {
   .calendar-event-detail__line,
   .calendar-event-detail__time {
     display: none;
@@ -4285,7 +4286,7 @@
   }
 
   .schedule-layout--calendar-large .schedule-workspace.schedule-calendar .rbc-timeslot-group {
-    min-height: 64px;
+    min-height: 32px;
   }
 
   .schedule-layout--calendar-large .schedule-workspace.schedule-calendar .rbc-toolbar-label {
