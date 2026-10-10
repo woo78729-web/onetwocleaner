@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
 import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
+import { commitScheduleCache, readScheduleCache } from '../utils/scheduleDataCache';
 import { loadAvailabilityDays } from '../utils/serviceAreas';
 import {
   buildSchedulePayload,
@@ -62,8 +63,8 @@ export default function AdminSchedulesPage() {
   const isMobile = useIsMobile();
   const isDesktop = !useIsMobile(980);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [employees, setEmployees] = useState([]);
-  const [allSchedules, setAllSchedules] = useState([]);
+  const [employees, setEmployees] = useState(() => readScheduleCache().employees);
+  const [allSchedules, setAllSchedules] = useState(() => readScheduleCache().schedules);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [form, setForm] = useState(emptyScheduleForm);
@@ -79,7 +80,7 @@ export default function AdminSchedulesPage() {
   });
   const [selectedAreas, setSelectedAreas] = useState([]);
   const [lookaheadDays, setLookaheadDays] = useState(() => loadAvailabilityDays(14));
-  const [leaves, setLeaves] = useState([]);
+  const [leaves, setLeaves] = useState(() => readScheduleCache().leaves);
   const [snapshotSchedule, setSnapshotSchedule] = useState(null);
   const [successSummary, setSuccessSummary] = useState(null);
   const [pendingMailRedirect, setPendingMailRedirect] = useState(false);
@@ -101,8 +102,11 @@ export default function AdminSchedulesPage() {
   }, [allSchedules, selectedAreas, selectedEmployeeId]);
 
   const loadEmployees = useCallback(async () => {
+    const startedAt = Date.now();
     const result = await api.getEmployees();
-    setEmployees(result.data.filter((item) => item.role === 'employee' && item.is_active));
+    const nextEmployees = result.data.filter((item) => item.role === 'employee' && item.is_active);
+    setEmployees(nextEmployees);
+    commitScheduleCache(startedAt, { employees: nextEmployees });
   }, []);
 
   const loadSchedules = useCallback(async (
@@ -111,6 +115,7 @@ export default function AdminSchedulesPage() {
     visibleDayCount = displayDays,
   ) => {
     const requestId = scheduleRequestRef.current + 1;
+    const startedAt = Date.now();
     scheduleRequestRef.current = requestId;
     setError('');
     try {
@@ -145,6 +150,10 @@ export default function AdminSchedulesPage() {
 
       setAllSchedules(payload.schedules);
       setLeaves(payload.leaves);
+      commitScheduleCache(startedAt, {
+        schedules: payload.schedules,
+        leaves: payload.leaves,
+      });
     } catch (err) {
       if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
         return;
@@ -153,6 +162,10 @@ export default function AdminSchedulesPage() {
       setError(err.message);
     }
   }, [currentDate, lookaheadDays, displayDays]);
+
+  useEffect(() => {
+    import('./AdminScheduleDayPage');
+  }, []);
 
   useEffect(() => {
     loadEmployees().catch((err) => setError(err.message));

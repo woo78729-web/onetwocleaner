@@ -2020,12 +2020,6 @@
   z-index: 1;
 }
 
-.schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event.rbc-event-leave:not(.rbc-event-leave--timed) {
-  height: 26px !important;
-  max-height: 26px !important;
-  min-height: 0 !important;
-}
-
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event:not(.rbc-event-leave) {
   z-index: 3;
 }
