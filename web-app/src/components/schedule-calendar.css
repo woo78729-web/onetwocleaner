@@ -838,9 +838,7 @@
     position: sticky;
     top: 0;
     z-index: 30;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: #ffffff;
   }
 
   .schedule-mobile-toolbar__actions {
@@ -2313,9 +2311,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(16, 42, 67, 0.28);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  background: rgba(16, 42, 67, 0.45);
 }
 
 .modal-panel {
@@ -2546,9 +2542,7 @@
   border: 1px solid var(--glass-border-edge);
   border-top: 1px solid var(--glass-border-edge-top);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: #ffffff;
 }
 
 .calendar-settings__grid {
@@ -3194,11 +3188,9 @@
   align-items: start;
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.48);
+  background: #ffffff;
   border: 1px solid var(--glass-border-edge);
   border-top: 1px solid var(--glass-border-edge-top);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 
 .availability-day-board__row.is-selected {
@@ -3773,7 +3765,6 @@
 
 .schedule-form-overlay {
   background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(6px);
   overflow: auto;
   overscroll-behavior: contain;
   align-items: center;

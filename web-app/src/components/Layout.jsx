@@ -5,7 +5,7 @@ import { assetUrl } from '../utils/assetUrl';
 import { getMobileTabItems, getNavStructure } from '../utils/navItems';
 import { getRoleLabel } from '../utils/permissions';
 import { UnitChangeAlertModal } from './UnitChangeAlertModal';
-import { abortPageRequests, api } from '../api/client';
+import { api } from '../api/client';
 
 const LayoutTitleContext = createContext(null);
 
@@ -121,16 +121,11 @@ function MobileNavSection({ entry, onNavigate }) {
 }
 
 export function PersistentLayout() {
-  const location = useLocation();
   const [title, setTitleState] = useState('');
   const setTitle = useCallback((nextTitle) => {
     setTitleState((current) => (current === nextTitle ? current : nextTitle));
   }, []);
   const contextValue = useMemo(() => ({ setTitle }), [setTitle]);
-
-  useEffect(() => () => {
-    abortPageRequests();
-  }, [location.pathname]);
 
   return (
     <LayoutTitleContext.Provider value={contextValue}>
@@ -239,10 +234,7 @@ function LayoutFrame({ title, children }) {
 
   return (
     <div className="app-shell">
-      <div className="app-shell__backdrop" aria-hidden="true">
-        <div className="app-shell__glow app-shell__glow--left" />
-        <div className="app-shell__glow app-shell__glow--right" />
-      </div>
+      <div className="app-shell__backdrop" aria-hidden="true" />
 
       <div className="app-shell__content">
         <header className="topbar glass-panel">

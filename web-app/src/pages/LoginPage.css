@@ -20,9 +20,7 @@
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
-  transform: scale(1.04);
-  will-change: transform;
-  animation: login-bg-zoom 24s ease-in-out infinite alternate;
+  transform: none;
 }
 
 .login-screen__photo--left {

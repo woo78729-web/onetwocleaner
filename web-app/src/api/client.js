@@ -65,23 +65,6 @@ class ApiError extends Error {
   }
 }
 
-const PERSIST_GET_PATHS = new Set([
-  '/me',
-  '/admin/remittance-tracking/alerts',
-  '/admin/reports/unit-change-alerts',
-]);
-
-let pageRequestController = new AbortController();
-
-export function abortPageRequests() {
-  pageRequestController.abort();
-  pageRequestController = new AbortController();
-}
-
-export function getPageRequestSignal() {
-  return pageRequestController.signal;
-}
-
 export function isAbortError(error) {
   return error?.name === 'AbortError' || error?.code === 20;
 }
@@ -159,7 +142,7 @@ class AcCleaningApi {
     window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
   }
 
-  async request(method, path, { body, params, raw = false, persist = false } = {}) {
+  async request(method, path, { body, params, raw = false } = {}) {
     const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
     const token = this.syncTokenFromStorage();
 
@@ -183,10 +166,8 @@ class AcCleaningApi {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const keepAlive = persist || method !== 'GET' || PERSIST_GET_PATHS.has(path);
     const { signal, cleanup } = mergeAbortSignals([
       AbortSignal.timeout(30000),
-      keepAlive ? null : getPageRequestSignal(),
     ]);
 
     let response;
