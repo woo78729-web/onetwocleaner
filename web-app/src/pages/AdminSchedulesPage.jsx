@@ -776,6 +776,7 @@ export default function AdminSchedulesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onDelete={handleDelete}
+          onLeaveCreated={() => loadSchedules(currentDate)}
         />
       </Layout>
     </PageErrorBoundary>

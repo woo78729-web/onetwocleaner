@@ -30,10 +30,10 @@ import {
   formatTimeValue,
   getCalendarLoadRange,
   getLeaveEventStyle,
+  getScheduleDisplayTimes,
   getScheduleEventStyle,
   hasScheduleReport,
   isSlotInPast,
-  LEAVE_BAND_END_HOUR,
   LEAVE_BAND_START_HOUR,
   scheduleToForm,
   slotToForm,
@@ -96,7 +96,7 @@ export default function AdminScheduleDayPage() {
       kind: 'leave',
       key: event.id,
       leave: event.resource,
-      sortKey: `${String(LEAVE_BAND_START_HOUR).padStart(2, '0')}:00`,
+      sortKey: formatTimeValue(event.resource?.start_time || `${String(LEAVE_BAND_START_HOUR).padStart(2, '0')}:00`),
     }));
 
     const scheduleEntries = sortedSchedules.map((schedule) => ({
@@ -110,8 +110,6 @@ export default function AdminScheduleDayPage() {
       left.sortKey.localeCompare(right.sortKey)
     ));
   }, [dayLeaveEvents, sortedSchedules]);
-
-  const leaveTimeLabel = `${String(LEAVE_BAND_START_HOUR).padStart(2, '0')}:00 - ${String(LEAVE_BAND_END_HOUR).padStart(2, '0')}:00`;
 
   const loadEmployees = useCallback(async () => {
     const result = await api.getEmployees();
@@ -449,7 +447,9 @@ export default function AdminScheduleDayPage() {
                         className="schedule-day-block__technician"
                       />
                       <p className="schedule-day-block__line">{name} 休假</p>
-                      <p className="schedule-day-block__time">{leaveTimeLabel}</p>
+                      <p className="schedule-day-block__time">
+                        {formatChineseTimeRange(getScheduleDisplayTimes(leave))}
+                      </p>
                     </div>
                   </article>
                 );
@@ -514,6 +514,7 @@ export default function AdminScheduleDayPage() {
         onClose={closeModal}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
+        onLeaveCreated={loadSchedules}
       />
     </Layout>
   );

@@ -315,6 +315,7 @@ export default function AdminRegionalSchedulingPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onDelete={handleDelete}
+          onLeaveCreated={loadSchedules}
         />
       </Layout>
     </PageErrorBoundary>

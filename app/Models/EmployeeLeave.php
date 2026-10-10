@@ -15,6 +15,8 @@ class EmployeeLeave extends Model
         'user_id',
         'leave_type',
         'leave_date',
+        'start_time',
+        'end_time',
         'weekday',
         'note',
     ];
