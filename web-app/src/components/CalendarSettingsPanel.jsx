@@ -157,7 +157,7 @@ export function CalendarSettingsPanel({
             )}
           </div>
 
-          <p className="hint calendar-settings__hint">格子比例與東東相同；字會換行，不會擠在一起。設定會保存在此瀏覽器。</p>
+          <p className="hint calendar-settings__hint">格子比例已固定；字會換行，不會擠在一起。設定會保存在此瀏覽器。</p>
         </div>
       )}
     </div>
