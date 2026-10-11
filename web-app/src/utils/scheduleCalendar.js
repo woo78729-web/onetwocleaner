@@ -898,9 +898,46 @@ export function getMonthRange(date) {
   };
 }
 
+function addDaysToDateKey(dateKey, days) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + days);
+
+  return formatDateOnly(date);
+}
+
+function rangesTouch(left, right) {
+  if (!left?.date_from || !left?.date_to || !right?.date_from || !right?.date_to) {
+    return false;
+  }
+
+  return right.date_from <= addDaysToDateKey(left.date_to, 1)
+    && left.date_from <= addDaysToDateKey(right.date_to, 1);
+}
+
+export function getConnectedScheduleRange(primaryRange, extraRange) {
+  if (!rangesTouch(primaryRange, extraRange)) {
+    return primaryRange;
+  }
+
+  return {
+    date_from: primaryRange.date_from < extraRange.date_from ? primaryRange.date_from : extraRange.date_from,
+    date_to: primaryRange.date_to > extraRange.date_to ? primaryRange.date_to : extraRange.date_to,
+  };
+}
+
 export function getCalendarLoadRange(date) {
   const month = getMonthRange(date);
-  const future = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = formatDateOnly(today);
+
+  // A finished month is loaded by itself. Extending date_to through today
+  // would read every month in between, which is why older months got slower.
+  if (month.date_to < todayKey) {
+    return month;
+  }
+
+  const future = new Date(today);
   future.setDate(future.getDate() + 14);
 
   return {
@@ -967,18 +1004,13 @@ export function isDateInVisibleRange(day, rangeStart, displayDays = 7) {
 export function getAvailabilityLoadRange(lookaheadDays, anchorDate = new Date()) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const calendarRange = getCalendarLoadRange(anchorDate);
   const end = new Date(today);
   end.setDate(end.getDate() + Math.max(1, Number(lookaheadDays) || 14));
 
-  const todayStr = formatDateOnly(today);
-  const endStr = formatDateOnly(end);
-
-  return {
-    date_from: calendarRange.date_from < todayStr ? calendarRange.date_from : todayStr,
-    date_to: endStr > calendarRange.date_to ? endStr : calendarRange.date_to,
-  };
+  return getConnectedScheduleRange(getCalendarLoadRange(anchorDate), {
+    date_from: formatDateOnly(today),
+    date_to: formatDateOnly(end),
+  });
 }
 
 export function combineDateTime(dateStr, timeStr) {
