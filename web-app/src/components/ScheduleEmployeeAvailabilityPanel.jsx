@@ -10,6 +10,8 @@ import { formatChineseTimeValue, formatDateOnly, formatScheduleDateLabel } from 
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ServiceAreaPicker } from './ServiceAreaPicker';
 
+const MONTH_ONLY_VIEWS = ['month'];
+
 function formatJobLine(job) {
   const start = formatChineseTimeValue(job.start_time);
   const end = formatChineseTimeValue(job.end_time);
@@ -161,7 +163,7 @@ function AvailabilityMobileDayRow({
   );
 }
 
-function AvailabilityOverviewCalendar({ date, schedules, leaves, onNavigate }) {
+function AvailabilityOverviewCalendar({ date, schedules, onNavigate }) {
   const currentDate = useMemo(() => new Date(`${date}T12:00:00`), [date]);
 
   if (!date) {
@@ -169,14 +171,17 @@ function AvailabilityOverviewCalendar({ date, schedules, leaves, onNavigate }) {
   }
 
   return (
-    <div className="availability-day-calendar">
+    <div className="availability-day-calendar availability-day-calendar--month">
+      <p className="availability-month-overview__title">這個月該區有排班的日子</p>
       <ScheduleCalendar
         schedules={schedules}
-        leaves={leaves}
+        leaves={[]}
         currentDate={currentDate}
         displayDays={1}
-        initialView="day"
+        initialView="month"
         onNavigate={onNavigate}
+        onDrillDown={onNavigate}
+        allowedViews={MONTH_ONLY_VIEWS}
       />
     </div>
   );
@@ -189,13 +194,7 @@ function AvailabilityDayBoard({
   selectedKey,
   onSelect,
   onPickOpenSlot,
-  overviewDate,
-  overviewSchedules,
-  leaves,
-  onOverviewNavigate,
 }) {
-  const showCalendar = overviewDate === day.date;
-
   return (
     <div className="availability-day-board">
       <div className="availability-day-board__list">
@@ -265,15 +264,6 @@ function AvailabilityDayBoard({
           );
         })}
       </div>
-
-      {showCalendar && (
-        <AvailabilityOverviewCalendar
-          date={overviewDate}
-          schedules={overviewSchedules}
-          leaves={leaves}
-          onNavigate={onOverviewNavigate}
-        />
-      )}
     </div>
   );
 }
@@ -286,9 +276,9 @@ export function ScheduleEmployeeAvailabilityPanel({
   onLookaheadDaysChange,
   selectedEmployeeId = '',
   onPickOpenSlot,
+  onVisibleMonthChange,
   employees = [],
   allSchedules = [],
-  leaves = [],
 }) {
   const isDesktop = !useIsMobile(980);
   const [loading, setLoading] = useState(false);
@@ -376,22 +366,26 @@ export function ScheduleEmployeeAvailabilityPanel({
 
     if (firstEmployee) {
       setSelectedKey(buildSelectionKey(firstDay.date, firstEmployee.id));
-      setOverviewDate(firstDay.date);
+      setOverviewDate((current) => current || firstDay.date);
     }
   }, [visibleAvailability, selectedKey]);
 
   function handleSelectedAreasChange(nextAreas) {
     setSelectedKey('');
-    setOverviewDate('');
+    setOverviewDate((current) => current || formatDateOnly(new Date()));
     onSelectedAreasChange(nextAreas);
   }
 
   function handleOverviewNavigate(date) {
-    const nextDate = formatDateOnly(date);
+    const nextDate = date instanceof Date ? date : new Date(`${date}T12:00:00`);
+    const nextKey = formatDateOnly(nextDate);
 
-    if (nextDate) {
-      setOverviewDate(nextDate);
+    if (!nextKey) {
+      return;
     }
+
+    setOverviewDate(nextKey);
+    onVisibleMonthChange?.(nextDate);
   }
 
   function handlePresetDays(days) {
@@ -421,13 +415,17 @@ export function ScheduleEmployeeAvailabilityPanel({
     onPickOpenSlot?.(payload);
   }
 
+  const activeDate = overviewDate || formatDateOnly(new Date());
+  const activeAvailabilityDay = visibleAvailability?.days?.find((day) => day.date === activeDate) || null;
+  const activeRows = filterDisplayableEmployees(activeAvailabilityDay?.employees || []);
+
   return (
     <section className="area-availability-bar employee-availability-panel">
       <div className="area-availability-bar__header">
         <div>
           <h3 className="area-availability-bar__title">{panelTitle}</h3>
           <p className="hint">
-            點一個縣市就只看該縣，再點其他縣市會改過去。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
+            點一個縣市就只看該縣。月曆會一次顯示這個月該區有排班的日子，點日子可看當天師傅空檔。
           </p>
         </div>
         <div className="area-availability-bar__range">
@@ -477,72 +475,43 @@ export function ScheduleEmployeeAvailabilityPanel({
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {visibleAvailability?.days?.length > 0 && (
+      {selectedAreas.length > 0 && (
+        <AvailabilityOverviewCalendar
+          date={activeDate}
+          schedules={overviewSchedules}
+          onNavigate={handleOverviewNavigate}
+        />
+      )}
+
+      {activeAvailabilityDay && activeRows.length > 0 && (
         isDesktop ? (
           <div className="employee-availability-panel__days">
-            {visibleAvailability.days.map((day) => {
-              const rows = filterDisplayableEmployees(day.employees || []);
-
-              if (rows.length === 0) {
-                return null;
-              }
-
-              return (
-                <article key={day.date} className="employee-availability-day">
-                  <header className="employee-availability-day__header">
-                    <h4>{formatScheduleDateLabel(day.date)}</h4>
-                    <span className="employee-availability-day__weekday">週{day.weekday}</span>
-                  </header>
-
-                  <AvailabilityDayBoard
-                    day={day}
-                    rows={rows}
-                    selectedAreas={selectedAreas}
-                    selectedKey={selectedKey}
-                    onSelect={handleSelect}
-                    onPickOpenSlot={handlePickOpenSlot}
-                    overviewDate={overviewDate}
-                    overviewSchedules={overviewSchedules}
-                    leaves={leaves}
-                    onOverviewNavigate={handleOverviewNavigate}
-                  />
-                </article>
-              );
-            })}
+            <article className="employee-availability-day">
+              <header className="employee-availability-day__header">
+                <h4>{formatScheduleDateLabel(activeAvailabilityDay.date)}</h4>
+                <span className="employee-availability-day__weekday">週{activeAvailabilityDay.weekday}</span>
+              </header>
+              <AvailabilityDayBoard
+                day={activeAvailabilityDay}
+                rows={activeRows}
+                selectedAreas={selectedAreas}
+                selectedKey={selectedKey}
+                onSelect={handleSelect}
+                onPickOpenSlot={handlePickOpenSlot}
+              />
+            </article>
           </div>
         ) : (
-          <>
-            <div className="employee-availability-panel__days employee-availability-panel__days--mobile-list">
-              {visibleAvailability.days.map((day) => {
-                const visibleEmployees = filterDisplayableEmployees(day.employees || []);
-
-                if (visibleEmployees.length === 0) {
-                  return null;
-                }
-
-                return (
-                  <AvailabilityMobileDayRow
-                    key={day.date}
-                    day={day}
-                    employees={visibleEmployees}
-                    selectedAreas={selectedAreas}
-                    selectedKey={selectedKey}
-                    onSelect={handleSelect}
-                    onPickOpenSlot={handlePickOpenSlot}
-                  />
-                );
-              })}
-            </div>
-
-            {overviewDate && (
-              <AvailabilityOverviewCalendar
-                date={overviewDate}
-                schedules={overviewSchedules}
-                leaves={leaves}
-                onNavigate={handleOverviewNavigate}
-              />
-            )}
-          </>
+          <div className="employee-availability-panel__days employee-availability-panel__days--mobile-list">
+            <AvailabilityMobileDayRow
+              day={activeAvailabilityDay}
+              employees={activeRows}
+              selectedAreas={selectedAreas}
+              selectedKey={selectedKey}
+              onSelect={handleSelect}
+              onPickOpenSlot={handlePickOpenSlot}
+            />
+          </div>
         )
       )}
     </section>

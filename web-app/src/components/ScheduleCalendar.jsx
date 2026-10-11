@@ -26,6 +26,8 @@ import {
 
   buildScheduleCalendarEvents,
 
+  formatDateOnly,
+
   getCalendarDisplayRange,
 
   getScheduleEventClassName,
@@ -216,6 +218,8 @@ export function ScheduleCalendar({
 
   initialView = null,
 
+  allowedViews = null,
+
   hidePrice = false,
 
 }) {
@@ -268,11 +272,30 @@ export function ScheduleCalendar({
       nextViews.week = weekView;
     }
 
-    return nextViews;
-  }, [weekView]);
+    if (!allowedViews?.length) {
+      return nextViews;
+    }
+
+    const filtered = {};
+    allowedViews.forEach((name) => {
+      if (nextViews[name]) {
+        filtered[name] = nextViews[name];
+      }
+    });
+
+    return Object.keys(filtered).length ? filtered : nextViews;
+  }, [weekView, allowedViews]);
 
   useEffect(() => {
     setView((previous) => {
+      if (allowedViews?.length === 1 && allowedViews.includes(previous)) {
+        return previous;
+      }
+
+      if (allowedViews?.length === 1) {
+        return allowedViews[0];
+      }
+
       if (previous === 'month' || previous === 'agenda') {
         return previous;
       }
@@ -283,11 +306,13 @@ export function ScheduleCalendar({
 
       return safeDisplayDays === 1 ? 'day' : 'week';
     });
-  }, [safeDisplayDays, weekView]);
+  }, [safeDisplayDays, weekView, allowedViews]);
 
 
 
   const calendarKey = `${safeDisplayDays}-${view}-${recoverKey}`;
+  const paintStateRef = useRef({ events: [], displayRange: null, settings });
+  const autoRecoverRef = useRef(0);
 
   useEffect(() => {
     const node = workspaceRef.current;
@@ -298,32 +323,106 @@ export function ScheduleCalendar({
     }
 
     let timer = 0;
+    const mountedAt = Date.now();
 
-    const check = () => {
-      const grid = node.querySelector('.rbc-time-content, .rbc-month-view');
-      const blank = Boolean(grid) && grid.clientHeight < 120;
-      setCalendarBlank((previous) => (previous === blank ? previous : blank));
+    const eventShouldAppear = (event) => {
+      const { displayRange: range, settings: calendarSettings } = paintStateRef.current;
+      const day = formatDateOnly(event?.start);
+
+      if (!day || !range || day < range.date_from || day > range.date_to) {
+        return false;
+      }
+
+      if (view === 'month') {
+        return true;
+      }
+
+      const start = event.start;
+      const end = event.end;
+
+      if (!(start instanceof Date) || !(end instanceof Date)) {
+        return false;
+      }
+
+      const startMinute = start.getHours() * 60 + start.getMinutes();
+      const endMinute = end.getHours() * 60 + end.getMinutes();
+      const windowStart = Number(calendarSettings.startHour) * 60;
+      const windowEnd = Number(calendarSettings.endHour) * 60;
+
+      return endMinute > windowStart && startMinute < windowEnd;
     };
 
-    timer = window.setTimeout(check, 700);
+    const check = () => {
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      const grid = node.querySelector('.rbc-time-content, .rbc-month-view');
+      const gridCollapsed = Boolean(grid) && grid.clientHeight < 120;
+      const shouldPaint = (paintStateRef.current.events || []).some(eventShouldAppear);
+      const painted = [...node.querySelectorAll('.rbc-event, .rbc-background-event, .rbc-show-more')]
+        .some((element) => {
+          const box = element.getBoundingClientRect();
+          return box.height > 8 && box.width > 8;
+        });
+      const layoutReady = Date.now() - mountedAt > 600;
+      const eventsMissing = layoutReady && Boolean(grid) && !gridCollapsed && shouldPaint && !painted;
+      const blank = gridCollapsed || eventsMissing;
+
+      if (!blank) {
+        autoRecoverRef.current = 0;
+        setCalendarBlank((previous) => (previous ? false : previous));
+        return;
+      }
+
+      if (autoRecoverRef.current < 2) {
+        autoRecoverRef.current += 1;
+        setCalendarBlank((previous) => (previous ? false : previous));
+        setRecoverKey((value) => value + 1);
+        return;
+      }
+
+      setCalendarBlank(true);
+    };
+
+    const scheduleCheck = (delay) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(check, delay);
+    };
+
+    const handleVisible = () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      autoRecoverRef.current = 0;
+      scheduleCheck(500);
+    };
+
+    scheduleCheck(800);
 
     let observer;
 
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(() => {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(check, 300);
+        scheduleCheck(300);
       });
       observer.observe(node);
     }
 
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleVisible);
+
     return () => {
       window.clearTimeout(timer);
       observer?.disconnect();
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
     };
   }, [calendarKey, view]);
 
   function recoverCalendar() {
+    autoRecoverRef.current = 0;
     setCalendarBlank(false);
     setRecoverKey((value) => value + 1);
   }
@@ -372,7 +471,7 @@ export function ScheduleCalendar({
 
   }, [baseCalendarEvents, eventOverrides]);
 
-
+  paintStateRef.current = { events, displayRange, settings };
 
   const clearEventOverride = useCallback((eventId) => {
 

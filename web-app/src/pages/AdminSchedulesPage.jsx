@@ -403,6 +403,18 @@ export default function AdminSchedulesPage() {
     setCurrentDate(date);
   }
 
+  function handleRegionMonthChange(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    setCurrentDate((current) => (
+      current.getFullYear() === date.getFullYear() && current.getMonth() === date.getMonth()
+        ? current
+        : date
+    ));
+  }
+
   function handleMiniRangeChange({ rangeStart, displayDays: nextDays }) {
     setCurrentDate(rangeStart);
     if (nextDays) {
@@ -617,6 +629,7 @@ export default function AdminSchedulesPage() {
               onLookaheadDaysChange={setLookaheadDays}
               selectedEmployeeId={selectedEmployeeId}
               onPickOpenSlot={handleAvailabilityPickOpenSlot}
+              onVisibleMonthChange={handleRegionMonthChange}
               employees={employees}
               allSchedules={allSchedules}
               leaves={leaves}

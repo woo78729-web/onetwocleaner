@@ -25,6 +25,7 @@ import {
   formatDateOnly,
   getAvailabilityLoadRange,
   getCalendarLoadRange,
+  getMonthRange,
   isSlotInPast,
   scheduleToForm,
   slotToForm,
@@ -41,6 +42,7 @@ export default function AdminRegionalSchedulingPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [selectedAreas, setSelectedAreas] = useState([]);
   const [lookaheadDays, setLookaheadDays] = useState(() => loadAvailabilityDays(14));
+  const [scheduleAnchor, setScheduleAnchor] = useState(() => new Date());
   const [form, setForm] = useState(emptyScheduleForm);
   const [editId, setEditId] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -62,15 +64,22 @@ export default function AdminRegionalSchedulingPage() {
     setError('');
 
     try {
-      const anchor = new Date();
+      const anchor = scheduleAnchor;
       const availabilityRange = getAvailabilityLoadRange(lookaheadDays, anchor);
+      const monthRange = getMonthRange(anchor);
       const calendarRange = getCalendarLoadRange(anchor);
+      const dateFrom = availabilityRange.date_from < monthRange.date_from
+        ? availabilityRange.date_from
+        : monthRange.date_from;
+      const dateTo = availabilityRange.date_to > monthRange.date_to
+        ? availabilityRange.date_to
+        : monthRange.date_to;
 
       const payload = await loadWithRetry(async () => {
         const [result, leaveResult] = await Promise.all([
           api.getCalendarSchedules({
-            date_from: availabilityRange.date_from,
-            date_to: availabilityRange.date_to,
+            date_from: dateFrom,
+            date_to: dateTo,
             user_id: selectedEmployeeId || undefined,
           }),
           api.getPlanningLeaves(calendarRange),
@@ -95,7 +104,7 @@ export default function AdminRegionalSchedulingPage() {
 
       setError(err.message);
     }
-  }, [lookaheadDays, selectedEmployeeId]);
+  }, [lookaheadDays, scheduleAnchor, selectedEmployeeId]);
 
   useEffect(() => {
     loadEmployees().catch((err) => setError(err.message));
@@ -128,6 +137,18 @@ export default function AdminRegionalSchedulingPage() {
     }
 
     return [editingSchedule.user, ...employees];
+  }
+
+  function handleVisibleMonthChange(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    setScheduleAnchor((current) => (
+      current.getFullYear() === date.getFullYear() && current.getMonth() === date.getMonth()
+        ? current
+        : date
+    ));
   }
 
   function handleAvailabilityPickOpenSlot({ date, employeeId, slot, areas }) {
@@ -284,6 +305,7 @@ export default function AdminRegionalSchedulingPage() {
             onLookaheadDaysChange={setLookaheadDays}
             selectedEmployeeId={selectedEmployeeId}
             onPickOpenSlot={handleAvailabilityPickOpenSlot}
+            onVisibleMonthChange={handleVisibleMonthChange}
             employees={employees}
             allSchedules={allSchedules}
             leaves={leaves}

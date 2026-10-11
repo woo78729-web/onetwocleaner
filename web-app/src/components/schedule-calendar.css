@@ -99,7 +99,7 @@
   overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 .schedule-workspace.schedule-calendar .rbc-time-content > .rbc-time-gutter {
@@ -122,8 +122,15 @@
 
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-events-container {
   margin: 0 6px 0 4px;
+  top: 0;
+  bottom: 0;
+  height: auto;
   z-index: 2;
   overflow: hidden;
+}
+
+.schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event {
+  max-height: none;
 }
 
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event-label {
@@ -3350,8 +3357,50 @@
   min-height: 0;
 }
 
-.availability-day-calendar .schedule-calendar-scroll {
+.availability-day-calendar:not(.availability-day-calendar--month) .schedule-calendar-scroll {
   min-height: 480px;
+}
+
+.availability-month-overview__title {
+  margin: 12px 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--tech-navy, #102a43);
+}
+
+.availability-day-calendar--month .schedule-workspace.schedule-calendar,
+.availability-day-calendar--month .schedule-calendar-scroll,
+.availability-day-calendar--month .schedule-calendar-scroll--month {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  flex: none !important;
+}
+
+.availability-day-calendar--month .rbc-calendar {
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  flex: none !important;
+}
+
+.availability-day-calendar--month .rbc-month-view {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.availability-day-calendar--month .rbc-month-row {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 92px;
+  overflow: hidden;
 }
 
 .availability-day-board__placeholder {
