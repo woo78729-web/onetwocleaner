@@ -38,7 +38,7 @@ export default function PhoneLookupPage() {
 
             <h2 className="card-title">客戶電話查詢</h2>
 
-            <p className="hint">輸入電話可查詢過往清洗紀錄；查到單後可直接按報修，資訊會通知負責師傅。</p>
+            <p className="hint">輸入電話可立刻看到這件的地址和清洗日期，不必先記得是哪一天。查到單後可直接按報修，資訊會通知負責師傅。</p>
 
           </div>
 

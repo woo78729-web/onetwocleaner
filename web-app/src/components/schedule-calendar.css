@@ -2893,6 +2893,45 @@
   margin: 0;
 }
 
+.phone-lookup__date {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.phone-lookup__timing {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.phone-lookup__timing.is-soon {
+  color: #0b6e4f;
+  background: #e5f6ef;
+}
+
+.phone-lookup__timing.is-past {
+  color: #5c6b7a;
+  background: #eef2f6;
+}
+
+.phone-lookup__address {
+  min-width: 180px;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.phone-lookup__address-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .area-filter {
   margin-bottom: 14px;
 }

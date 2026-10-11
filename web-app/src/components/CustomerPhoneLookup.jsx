@@ -2,8 +2,29 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canManageSchedulePricing } from '../utils/permissions';
+import { GoogleMapsLink } from './GoogleMapsLink';
 import { MaintenanceReportFromScheduleModal } from './MaintenanceReportFromScheduleModal';
-import { formatDateOnly, formatTimeValue, getCustomerSourceLabel } from '../utils/scheduleCalendar';
+import { getServiceAreaLabel } from '../utils/serviceAreas';
+import { formatDateOnly, formatScheduleDateLabel, formatTimeValue, getCustomerSourceLabel } from '../utils/scheduleCalendar';
+
+function scheduleTimingLabel(workDate) {
+  const dateText = formatDateOnly(workDate);
+  const today = formatDateOnly(new Date());
+
+  if (!dateText || !today) {
+    return '';
+  }
+
+  if (dateText === today) {
+    return '今天';
+  }
+
+  if (dateText > today) {
+    return '即將施工';
+  }
+
+  return '已施工';
+}
 
 export function CustomerPhoneLookup({
   onSelectSchedule,
@@ -80,6 +101,7 @@ export function CustomerPhoneLookup({
             <thead>
               <tr>
                 <th>施工日期</th>
+                <th>地址</th>
                 <th>時間</th>
                 <th>客戶</th>
                 <th>FB/LINE</th>
@@ -90,9 +112,32 @@ export function CustomerPhoneLookup({
               </tr>
             </thead>
             <tbody>
-              {schedules.map((schedule) => (
+              {schedules.map((schedule) => {
+                const timing = scheduleTimingLabel(schedule.work_date);
+
+                return (
                 <tr key={schedule.id}>
-                  <td>{formatDateOnly(schedule.work_date)}</td>
+                  <td>
+                    <div className="phone-lookup__date">{formatScheduleDateLabel(schedule.work_date)}</div>
+                    {timing && (
+                      <span className={`phone-lookup__timing is-${timing === '已施工' ? 'past' : 'soon'}`}>
+                        {timing}
+                      </span>
+                    )}
+                  </td>
+                  <td className="phone-lookup__address">
+                    <div>{schedule.customer_address || '未填地址'}</div>
+                    <div className="phone-lookup__address-meta">
+                      {schedule.service_area && (
+                        <span>{getServiceAreaLabel(schedule.service_area)}</span>
+                      )}
+                      <GoogleMapsLink
+                        address={schedule.customer_address}
+                        label="地圖"
+                        className="btn btn-secondary btn-sm"
+                      />
+                    </div>
+                  </td>
                   <td>{formatTimeValue(schedule.start_time)} – {formatTimeValue(schedule.end_time)}</td>
                   <td>{schedule.customer_name}</td>
                   <td>
@@ -126,7 +171,8 @@ export function CustomerPhoneLookup({
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
