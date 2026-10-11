@@ -66,7 +66,7 @@ export function ServiceAreaPicker({
       setActiveTab(selectedInRegion?.tab || getRegionTabs(regionKey)[0]?.key || '');
     }
 
-    // 點縣市後若尚未勾選該縣任何區域，自動全選以便立刻顯示空檔
+    // 點縣市就改看該縣，清掉其他縣市，避免班表混在一起
     if (
       mode === 'multiple'
       && autoSelectRegionOnExpand
@@ -74,11 +74,9 @@ export function ServiceAreaPicker({
       && willExpand
     ) {
       const regionValues = region.areas.map((area) => area.value);
-      const hasAnySelected = regionValues.some((value) => values.includes(value));
-
-      if (!hasAnySelected) {
-        onChange?.([...new Set([...values, ...regionValues])]);
-      }
+      const regionValueSet = new Set(regionValues);
+      const kept = values.filter((value) => regionValueSet.has(value));
+      onChange?.(kept.length ? kept : regionValues);
     }
   }
 
@@ -103,10 +101,12 @@ export function ServiceAreaPicker({
       return;
     }
 
+    const regionValueSet = new Set(region.areas.map((area) => area.value));
     const tabValues = region.areas
       .filter((area) => !currentTab || area.tab === currentTab)
       .map((area) => area.value);
-    onChange?.([...new Set([...values, ...tabValues])]);
+    const kept = values.filter((value) => regionValueSet.has(value));
+    onChange?.([...new Set([...kept, ...tabValues])]);
   }
 
   function clearExpandedRegion() {

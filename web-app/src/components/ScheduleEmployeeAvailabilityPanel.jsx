@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
@@ -6,8 +6,8 @@ import {
   buildAreaFilterParam,
   saveAvailabilityDays,
 } from '../utils/serviceAreas';
-import { formatChineseTimeValue, formatScheduleDateLabel } from '../utils/scheduleCalendar';
-import { EmployeeDayScheduleSidebar } from './EmployeeDayScheduleSidebar';
+import { formatChineseTimeValue, formatDateOnly, formatScheduleDateLabel } from '../utils/scheduleCalendar';
+import { ScheduleCalendar } from './ScheduleCalendar';
 import { ServiceAreaPicker } from './ServiceAreaPicker';
 
 function formatJobLine(job) {
@@ -161,6 +161,27 @@ function AvailabilityMobileDayRow({
   );
 }
 
+function AvailabilityOverviewCalendar({ date, schedules, leaves, onNavigate }) {
+  const currentDate = useMemo(() => new Date(`${date}T12:00:00`), [date]);
+
+  if (!date) {
+    return null;
+  }
+
+  return (
+    <div className="availability-day-calendar">
+      <ScheduleCalendar
+        schedules={schedules}
+        leaves={leaves}
+        currentDate={currentDate}
+        displayDays={1}
+        initialView="day"
+        onNavigate={onNavigate}
+      />
+    </div>
+  );
+}
+
 function AvailabilityDayBoard({
   day,
   rows,
@@ -168,12 +189,12 @@ function AvailabilityDayBoard({
   selectedKey,
   onSelect,
   onPickOpenSlot,
-  employees,
-  allSchedules,
+  overviewDate,
+  overviewSchedules,
   leaves,
+  onOverviewNavigate,
 }) {
-  const [dateText, employeeId] = selectedKey?.split(':') || [];
-  const showDetail = dateText === day.date && employeeId;
+  const showCalendar = overviewDate === day.date;
 
   return (
     <div className="availability-day-board">
@@ -245,23 +266,14 @@ function AvailabilityDayBoard({
         })}
       </div>
 
-      <aside className="availability-day-board__detail">
-        {showDetail ? (
-          <EmployeeDayScheduleSidebar
-            employeeId={employeeId}
-            workDate={day.date}
-            employees={employees}
-            schedules={allSchedules}
-            leaves={leaves}
-            title="當日行程"
-          />
-        ) : (
-          <div className="availability-day-board__placeholder">
-            <p className="availability-day-board__placeholder-title">當日行程預覽</p>
-            <p className="hint">點選左側師傅名稱，或按綠色空檔方塊排班，右側會顯示完整班表。</p>
-          </div>
-        )}
-      </aside>
+      {showCalendar && (
+        <AvailabilityOverviewCalendar
+          date={overviewDate}
+          schedules={overviewSchedules}
+          leaves={leaves}
+          onNavigate={onOverviewNavigate}
+        />
+      )}
     </div>
   );
 }
@@ -282,13 +294,35 @@ export function ScheduleEmployeeAvailabilityPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [availability, setAvailability] = useState(null);
+  const [shownAreasKey, setShownAreasKey] = useState('');
   const [selectedKey, setSelectedKey] = useState('');
+  const [overviewDate, setOverviewDate] = useState('');
+  const requestRef = useRef(0);
+  const areasKey = selectedAreas.join(',');
+  const visibleAvailability = shownAreasKey === areasKey ? availability : null;
+
+  const overviewSchedules = useMemo(() => allSchedules.filter((schedule) => {
+    if (selectedEmployeeId && String(schedule.user_id ?? schedule.user?.id) !== String(selectedEmployeeId)) {
+      return false;
+    }
+
+    if (selectedAreas.length && !selectedAreas.includes(schedule.service_area)) {
+      return false;
+    }
+
+    return true;
+  }), [allSchedules, selectedAreas, selectedEmployeeId]);
 
   const loadAvailability = useCallback(async () => {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+
     if (!selectedAreas.length) {
       setAvailability(null);
+      setShownAreasKey('');
       setError('');
       setSelectedKey('');
+      setOverviewDate('');
       return;
     }
 
@@ -302,12 +336,24 @@ export function ScheduleEmployeeAvailabilityPanel({
         user_id: selectedEmployeeId || undefined,
       });
 
+      if (requestRef.current !== requestId) {
+        return;
+      }
+
       setAvailability(result.data);
+      setShownAreasKey(selectedAreas.join(','));
     } catch (err) {
+      if (requestRef.current !== requestId) {
+        return;
+      }
+
       setError(err.message);
       setAvailability(null);
+      setShownAreasKey('');
     } finally {
-      setLoading(false);
+      if (requestRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [selectedAreas, lookaheadDays, selectedEmployeeId]);
 
@@ -316,11 +362,11 @@ export function ScheduleEmployeeAvailabilityPanel({
   }, [loadAvailability]);
 
   useEffect(() => {
-    if (!availability?.days?.length || selectedKey) {
+    if (!visibleAvailability?.days?.length || selectedKey) {
       return;
     }
 
-    const firstDay = availability.days.find((day) => filterDisplayableEmployees(day.employees || []).length > 0);
+    const firstDay = visibleAvailability.days.find((day) => filterDisplayableEmployees(day.employees || []).length > 0);
 
     if (!firstDay) {
       return;
@@ -330,12 +376,22 @@ export function ScheduleEmployeeAvailabilityPanel({
 
     if (firstEmployee) {
       setSelectedKey(buildSelectionKey(firstDay.date, firstEmployee.id));
+      setOverviewDate(firstDay.date);
     }
-  }, [availability, selectedKey]);
+  }, [visibleAvailability, selectedKey]);
 
   function handleSelectedAreasChange(nextAreas) {
     setSelectedKey('');
+    setOverviewDate('');
     onSelectedAreasChange(nextAreas);
+  }
+
+  function handleOverviewNavigate(date) {
+    const nextDate = formatDateOnly(date);
+
+    if (nextDate) {
+      setOverviewDate(nextDate);
+    }
   }
 
   function handlePresetDays(days) {
@@ -356,10 +412,12 @@ export function ScheduleEmployeeAvailabilityPanel({
 
   function handleSelect(date, employeeId) {
     setSelectedKey(buildSelectionKey(date, employeeId));
+    setOverviewDate(date);
   }
 
   function handlePickOpenSlot(payload) {
     setSelectedKey(buildSelectionKey(payload.date, payload.employeeId));
+    setOverviewDate(payload.date);
     onPickOpenSlot?.(payload);
   }
 
@@ -369,7 +427,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         <div>
           <h3 className="area-availability-bar__title">{panelTitle}</h3>
           <p className="hint">
-            勾選縣市後展開區域，依日期顯示各師傅該區行程與可排時段。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
+            點一個縣市就只看該縣，再點其他縣市會改過去。同區域前班結束後預設 1 小時後可排；空班顯示全天可排。
           </p>
         </div>
         <div className="area-availability-bar__range">
@@ -409,7 +467,7 @@ export function ScheduleEmployeeAvailabilityPanel({
 
       {!selectedAreas.length && (
         <p className="hint employee-availability-panel__empty">
-          請先點選縣市（高雄／屏東／台南）。點縣市後會展開區域，也可按「全選」一次帶入該縣所有區域。
+          請先點一個縣市（高雄／屏東／台南）。點下去就只顯示該縣的班，不會跟其他縣市混在一起。
         </p>
       )}
 
@@ -419,10 +477,10 @@ export function ScheduleEmployeeAvailabilityPanel({
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {availability?.days?.length > 0 && (
+      {visibleAvailability?.days?.length > 0 && (
         isDesktop ? (
           <div className="employee-availability-panel__days">
-            {availability.days.map((day) => {
+            {visibleAvailability.days.map((day) => {
               const rows = filterDisplayableEmployees(day.employees || []);
 
               if (rows.length === 0) {
@@ -443,9 +501,10 @@ export function ScheduleEmployeeAvailabilityPanel({
                     selectedKey={selectedKey}
                     onSelect={handleSelect}
                     onPickOpenSlot={handlePickOpenSlot}
-                    employees={employees}
-                    allSchedules={allSchedules}
+                    overviewDate={overviewDate}
+                    overviewSchedules={overviewSchedules}
                     leaves={leaves}
+                    onOverviewNavigate={handleOverviewNavigate}
                   />
                 </article>
               );
@@ -454,7 +513,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         ) : (
           <>
             <div className="employee-availability-panel__days employee-availability-panel__days--mobile-list">
-              {availability.days.map((day) => {
+              {visibleAvailability.days.map((day) => {
                 const visibleEmployees = filterDisplayableEmployees(day.employees || []);
 
                 if (visibleEmployees.length === 0) {
@@ -475,17 +534,13 @@ export function ScheduleEmployeeAvailabilityPanel({
               })}
             </div>
 
-            {selectedKey && (
-              <div className="availability-day-preview availability-day-preview--mobile">
-                <EmployeeDayScheduleSidebar
-                  employeeId={selectedKey.split(':')[1]}
-                  workDate={selectedKey.split(':')[0]}
-                  employees={employees}
-                  schedules={allSchedules}
-                  leaves={leaves}
-                  title="當日行程"
-                />
-              </div>
+            {overviewDate && (
+              <AvailabilityOverviewCalendar
+                date={overviewDate}
+                schedules={overviewSchedules}
+                leaves={leaves}
+                onNavigate={handleOverviewNavigate}
+              />
             )}
           </>
         )

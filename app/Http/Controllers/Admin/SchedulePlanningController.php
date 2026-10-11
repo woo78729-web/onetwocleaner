@@ -17,7 +17,7 @@ class SchedulePlanningController extends Controller
     public function availability(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'areas' => ['nullable', 'string', 'max:500'],
+            'areas' => ['nullable', 'string', 'max:2000'],
             'days' => ['nullable', 'integer', 'min:1', 'max:60'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
