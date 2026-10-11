@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { AppErrorBoundary, AuthLoadingScreen } from './components/AppStatusScreens';
+import { AppErrorBoundary, PageLoadingFallback } from './components/AppStatusScreens';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { EmployeeOnboardingRoute } from './components/EmployeeOnboardingRoute';
 import LoginPage from './pages/LoginPage';
@@ -36,7 +36,7 @@ const EmployeeOnboardingPage = lazy(lazyRetry(() => import('./pages/EmployeeOnbo
 const EmployeeRulesPage = lazy(lazyRetry(() => import('./pages/EmployeeRulesPage')));
 
 function RouteLoadingScreen() {
-  return <AuthLoadingScreen message="載入頁面中..." />;
+  return <PageLoadingFallback />;
 }
 
 export default function App() {

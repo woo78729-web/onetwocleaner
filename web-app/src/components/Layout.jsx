@@ -5,6 +5,7 @@ import { assetUrl } from '../utils/assetUrl';
 import { getMobileTabItems, getNavStructure } from '../utils/navItems';
 import { getRoleLabel } from '../utils/permissions';
 import { UnitChangeAlertModal } from './UnitChangeAlertModal';
+import { PageLoadingFallback } from './AppStatusScreens';
 import { api } from '../api/client';
 
 const LayoutTitleContext = createContext(null);
@@ -130,7 +131,7 @@ export function PersistentLayout() {
   return (
     <LayoutTitleContext.Provider value={contextValue}>
       <LayoutFrame title={title}>
-        <Suspense fallback={<p className="hint">載入頁面中...</p>}>
+        <Suspense fallback={<PageLoadingFallback />}>
           <Outlet />
         </Suspense>
       </LayoutFrame>

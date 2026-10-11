@@ -2,7 +2,8 @@ const CHUNK_RELOAD_AT = 'spa-chunk-reload-at';
 const LEGACY_CHUNK_RELOAD = 'spa-chunk-reload';
 const CHUNK_RELOAD_COOLDOWN_MS = 12000;
 
-const CHUNK_ERROR_PATTERN = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\d]+ failed/i;
+const CHUNK_ERROR_PATTERN = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\d]+ failed|Expected a JavaScript|MIME type|timed out/i;
+const CHUNK_LOAD_TIMEOUT_MS = 12000;
 
 export function isChunkLoadError(error) {
   return CHUNK_ERROR_PATTERN.test(String(error?.message || error || ''));
@@ -32,6 +33,25 @@ function wait(ms) {
   });
 }
 
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error('Failed to fetch dynamically imported module: timed out'));
+    }, ms);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /**
  * Hashed chunks 404 when the open tab still has an old bundle.
  * Retry the import, then reload once. A later failure can reload again
@@ -43,7 +63,7 @@ export function lazyRetry(factory) {
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        const module = await factory();
+        const module = await withTimeout(factory(), CHUNK_LOAD_TIMEOUT_MS);
         clearChunkReload();
         return module;
       } catch (error) {
@@ -61,7 +81,7 @@ export function lazyRetry(factory) {
       sessionStorage.setItem(CHUNK_RELOAD_AT, String(Date.now()));
       sessionStorage.removeItem(LEGACY_CHUNK_RELOAD);
       window.location.reload();
-      return new Promise(() => {});
+      await wait(1500);
     }
 
     clearChunkReload();

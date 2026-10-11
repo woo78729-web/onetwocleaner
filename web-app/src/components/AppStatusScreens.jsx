@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, useEffect, useState } from 'react';
 import { canAutoReloadForChunk, isChunkLoadError, reopenSpaPage } from '../utils/lazyRetry';
 
 export class AppErrorBoundary extends Component {
@@ -48,6 +48,38 @@ export class AppErrorBoundary extends Component {
 
     return this.props.children;
   }
+}
+
+export function PageLoadingFallback({ message = '載入頁面中...' }) {
+  const [stale, setStale] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setStale(true), 10000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!stale || !canAutoReloadForChunk()) {
+      return undefined;
+    }
+
+    sessionStorage.setItem('spa-chunk-reload-at', String(Date.now()));
+    window.location.reload();
+
+    return undefined;
+  }, [stale]);
+
+  return (
+    <div className="page-loading-fallback">
+      <p className="hint">{stale ? '這頁載入太久，請重新開啟。' : message}</p>
+      {stale && (
+        <button type="button" className="btn btn-primary btn-sm" onClick={reopenSpaPage}>
+          重新開啟此頁
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function AuthLoadingScreen({ message = '載入中...' }) {
