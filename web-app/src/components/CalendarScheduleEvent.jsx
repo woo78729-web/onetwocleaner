@@ -1,7 +1,4 @@
-import {
-  buildScheduleCardLine,
-  formatScheduleDisplayTimeRange,
-} from '../utils/scheduleCalendar';
+import { formatScheduleDisplayTimeRange } from '../utils/scheduleCalendar';
 import { ScheduleTechnicianBadge } from './ScheduleTechnicianBadge';
 
 function eventDensityClass(event) {
@@ -20,7 +17,7 @@ function eventDensityClass(event) {
   return '';
 }
 
-export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedSchedules = [] }) {
+export function CalendarScheduleEvent({ event, view }) {
   const schedule = event.resource;
   const compact = view === 'month';
   const densityClass = eventDensityClass(event);
@@ -61,14 +58,14 @@ export function CalendarScheduleEvent({ event, view, hidePrice = false, relatedS
   }
 
   return (
-    <div className={`calendar-event-detail ${densityClass}`.trim()} data-schedule-id={schedule.id} title={buildScheduleCardLine(schedule, { hidePrice, relatedSchedules })}>
+    <div className={`calendar-event-detail ${densityClass}`.trim()} data-schedule-id={schedule.id} title={event.title}>
       <ScheduleTechnicianBadge
         user={schedule.user}
         size="xs"
         showName
         className="calendar-event-detail__technician"
       />
-      <p className="calendar-event-detail__line">{buildScheduleCardLine(schedule, { hidePrice, relatedSchedules })}</p>
+      <p className="calendar-event-detail__line">{event.title}</p>
       <p className="calendar-event-detail__time">{formatScheduleDisplayTimeRange(schedule)}</p>
     </div>
   );

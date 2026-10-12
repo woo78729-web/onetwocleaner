@@ -311,7 +311,6 @@ export function ScheduleCalendar({
 
 
   const calendarKey = `${safeDisplayDays}-${view}-${recoverKey}`;
-  const paintStateRef = useRef({ events: [], displayRange: null, settings });
   const autoRecoverRef = useRef(0);
 
   useEffect(() => {
@@ -325,33 +324,6 @@ export function ScheduleCalendar({
     let timer = 0;
     const mountedAt = Date.now();
 
-    const eventShouldAppear = (event) => {
-      const { displayRange: range, settings: calendarSettings } = paintStateRef.current;
-      const day = formatDateOnly(event?.start);
-
-      if (!day || !range || day < range.date_from || day > range.date_to) {
-        return false;
-      }
-
-      if (view === 'month') {
-        return true;
-      }
-
-      const start = event.start;
-      const end = event.end;
-
-      if (!(start instanceof Date) || !(end instanceof Date)) {
-        return false;
-      }
-
-      const startMinute = start.getHours() * 60 + start.getMinutes();
-      const endMinute = end.getHours() * 60 + end.getMinutes();
-      const windowStart = Number(calendarSettings.startHour) * 60;
-      const windowEnd = Number(calendarSettings.endHour) * 60;
-
-      return endMinute > windowStart && startMinute < windowEnd;
-    };
-
     const check = () => {
       if (document.visibilityState === 'hidden') {
         return;
@@ -359,25 +331,18 @@ export function ScheduleCalendar({
 
       const grid = node.querySelector('.rbc-time-content, .rbc-month-view');
       const gridCollapsed = Boolean(grid) && grid.clientHeight < 120;
-      const shouldPaint = (paintStateRef.current.events || []).some(eventShouldAppear);
-      const painted = [...node.querySelectorAll('.rbc-event, .rbc-background-event, .rbc-show-more')]
-        .some((element) => {
-          const box = element.getBoundingClientRect();
-          return box.height > 8 && box.width > 8;
-        });
-      const layoutReady = Date.now() - mountedAt > 600;
-      const eventsMissing = layoutReady && Boolean(grid) && !gridCollapsed && shouldPaint && !painted;
-      const blank = gridCollapsed || eventsMissing;
+      const layoutReady = Date.now() - mountedAt > 800;
 
-      if (!blank) {
-        autoRecoverRef.current = 0;
-        setCalendarBlank((previous) => (previous ? false : previous));
+      if (!grid || !layoutReady || !gridCollapsed) {
+        if (!gridCollapsed) {
+          autoRecoverRef.current = 0;
+          setCalendarBlank((previous) => (previous ? false : previous));
+        }
         return;
       }
 
-      if (autoRecoverRef.current < 2) {
+      if (autoRecoverRef.current < 1) {
         autoRecoverRef.current += 1;
-        setCalendarBlank((previous) => (previous ? false : previous));
         setRecoverKey((value) => value + 1);
         return;
       }
@@ -399,23 +364,13 @@ export function ScheduleCalendar({
       scheduleCheck(500);
     };
 
-    scheduleCheck(800);
-
-    let observer;
-
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(() => {
-        scheduleCheck(300);
-      });
-      observer.observe(node);
-    }
+    scheduleCheck(900);
 
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('focus', handleVisible);
 
     return () => {
       window.clearTimeout(timer);
-      observer?.disconnect();
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('focus', handleVisible);
     };
@@ -470,8 +425,6 @@ export function ScheduleCalendar({
     });
 
   }, [baseCalendarEvents, eventOverrides]);
-
-  paintStateRef.current = { events, displayRange, settings };
 
   const clearEventOverride = useCallback((eventId) => {
 
@@ -582,8 +535,8 @@ export function ScheduleCalendar({
 
 
   const components = useMemo(() => ({
-    event: (props) => <CalendarScheduleEvent {...props} view={view} hidePrice={hidePrice} relatedSchedules={schedules} />,
-  }), [hidePrice, schedules, view]);
+    event: (props) => <CalendarScheduleEvent {...props} view={view} />,
+  }), [view]);
 
 
 
@@ -720,7 +673,7 @@ export function ScheduleCalendar({
 
         components={components}
 
-        dayLayoutAlgorithm="no-overlap"
+        dayLayoutAlgorithm="overlap"
 
         dayPropGetter={(date) => {
           const classNames = [];

@@ -123,13 +123,14 @@
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-events-container {
   margin: 0 6px 0 4px;
   top: 0;
+  right: 0;
   bottom: 0;
-  height: auto;
+  left: 0;
   z-index: 2;
-  overflow: hidden;
 }
 
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event {
+  min-height: 18px;
   max-height: none;
 }
 
@@ -163,8 +164,8 @@
 
 .schedule-workspace.schedule-calendar .rbc-time-column .rbc-timeslot-group,
 .schedule-workspace.schedule-calendar .rbc-timeslot-group {
-  flex: 1 1 0;
-  height: auto;
+  flex: 0 0 var(--calendar-hour-height, 32px);
+  height: var(--calendar-hour-height, 32px);
   min-height: var(--calendar-hour-height, 32px);
   max-height: none;
   border-color: #f1f3f4;

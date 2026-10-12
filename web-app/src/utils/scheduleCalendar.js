@@ -962,9 +962,24 @@ export function getVisibleScheduleRange(rangeStart, displayDays = 7) {
   };
 }
 
+export function getMonthGridRange(date) {
+  const month = getMonthRange(date);
+  const start = new Date(`${month.date_from}T12:00:00`);
+  const end = new Date(`${month.date_to}T12:00:00`);
+  const startOffset = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - startOffset);
+  const endOffset = (end.getDay() + 6) % 7;
+  end.setDate(end.getDate() + (6 - endOffset));
+
+  return {
+    date_from: formatDateOnly(start),
+    date_to: formatDateOnly(end),
+  };
+}
+
 export function getCalendarDisplayRange(view, rangeStart, displayDays = 7) {
   if (view === 'month') {
-    return getMonthRange(rangeStart);
+    return getMonthGridRange(rangeStart);
   }
 
   if (view === 'agenda') {
@@ -975,9 +990,14 @@ export function getCalendarDisplayRange(view, rangeStart, displayDays = 7) {
 }
 
 export function buildScheduleCalendarEvents(schedules, leaves, dateFrom, dateTo, options = {}) {
-  const scheduleEvents = schedules.map((schedule) => scheduleToEvent(schedule, {
+  const visibleSchedules = schedules.filter((schedule) => {
+    const day = formatDateOnly(schedule?.work_date);
+
+    return Boolean(day) && day >= dateFrom && day <= dateTo;
+  });
+  const scheduleEvents = visibleSchedules.map((schedule) => scheduleToEvent(schedule, {
     ...options,
-    relatedSchedules: schedules,
+    relatedSchedules: visibleSchedules,
   }));
   const leaveEvents = expandLeavesToEvents(leaves, dateFrom, dateTo);
 
