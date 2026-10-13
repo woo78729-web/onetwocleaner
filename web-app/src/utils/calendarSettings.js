@@ -3,8 +3,8 @@ const STORAGE_KEY = 'schedule-calendar-settings';
 export const DEFAULT_CALENDAR_SETTINGS = {
   defaultView: 'week',
   weekStartsOn: 1,
-  startHour: 5,
-  endHour: 24,
+  startHour: 8,
+  endHour: 23,
   slotMinutes: 30,
   hourHeight: 32,
   colorMode: 'source',
@@ -42,9 +42,12 @@ export function loadCalendarSettings() {
       weekStartsOn: 1,
     };
 
-    if (merged.startHour === 7 && merged.endHour === 21) {
-      merged.startHour = 5;
-      merged.endHour = 24;
+    if (
+      (merged.startHour === 7 && merged.endHour === 21)
+      || (merged.startHour === 5 && merged.endHour === 24)
+    ) {
+      merged.startHour = 8;
+      merged.endHour = 23;
       saveCalendarSettings(merged);
     }
 

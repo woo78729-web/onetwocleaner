@@ -93,7 +93,7 @@
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
-  align-items: flex-start;
+  align-items: stretch;
   flex-direction: row;
   overflow-y: auto !important;
   overflow-x: hidden;
@@ -106,16 +106,16 @@
   flex: none;
   width: 64px;
   min-width: 64px;
-  min-height: 100%;
-  height: auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .schedule-workspace.schedule-calendar .rbc-time-content > .rbc-day-slot {
   flex: 1 1 0;
   width: 0;
   min-width: 0;
-  min-height: 100%;
-  height: auto;
+  min-height: 0;
+  height: 100%;
   position: relative;
   isolation: isolate;
 }
@@ -149,8 +149,8 @@
 }
 
 .schedule-workspace.schedule-calendar .rbc-time-column {
-  min-height: 100%;
-  height: auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .schedule-workspace.schedule-calendar .rbc-time-gutter .rbc-label {
@@ -164,9 +164,9 @@
 
 .schedule-workspace.schedule-calendar .rbc-time-column .rbc-timeslot-group,
 .schedule-workspace.schedule-calendar .rbc-timeslot-group {
-  flex: 0 0 var(--calendar-hour-height, 32px);
-  height: var(--calendar-hour-height, 32px);
-  min-height: var(--calendar-hour-height, 32px);
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
   max-height: none;
   border-color: #f1f3f4;
 }
@@ -2076,8 +2076,13 @@
 
 /* DnD: keep wrapper in normal flow; never absolute-position it across the week row. */
 .schedule-calendar--draggable .rbc-day-slot > div:has(.rbc-events-container) {
-  position: static !important;
-  inset: auto !important;
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
   pointer-events: none;
 }
 
