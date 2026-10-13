@@ -218,14 +218,29 @@ function layoutEventsByPerson({ events, slotMetrics, accessors }) {
   const columnWidth = 100 / Math.max(people.length, 1);
 
   return events.map((event) => {
-    const range = slotMetrics.getRange(accessors.start(event), accessors.end(event));
+    let top = 0;
+    let height = 0;
+
+    try {
+      const range = slotMetrics.getRange(accessors.start(event), accessors.end(event));
+      if (Number.isFinite(range?.top)) {
+        top = range.top;
+      }
+      if (Number.isFinite(range?.height)) {
+        height = range.height;
+      }
+    } catch {
+      top = 0;
+      height = 0;
+    }
+
     const index = Math.max(0, people.findIndex((person) => person.key === eventPersonKey(event)));
 
     return {
       event,
       style: {
-        top: range.top,
-        height: range.height,
+        top,
+        height,
         width: columnWidth,
         xOffset: index * columnWidth,
       },
@@ -590,7 +605,10 @@ export const ScheduleCalendar = memo(function ScheduleCalendar({
 
     <div
       className={`schedule-workspace schedule-calendar schedule-calendar--view-${view}${colorMode === 'employee' ? ' schedule-calendar--avatars' : ''}${onDrillDown ? ' schedule-calendar--drilldown' : ''}${dragEnabled ? ' schedule-calendar--draggable' : ''}`}
-      style={{ '--calendar-hour-height': `${clampHourHeight(settings.hourHeight)}px` }}
+      style={{
+        '--calendar-hour-height': `${clampHourHeight(settings.hourHeight)}px`,
+        '--calendar-hour-count': String(Math.max(1, Number(settings.endHour) - Number(settings.startHour) || 15)),
+      }}
     >
 
       <div

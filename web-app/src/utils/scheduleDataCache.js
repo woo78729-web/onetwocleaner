@@ -65,6 +65,14 @@ export function rememberScheduleRange(ranges, dateFrom, dateTo, at) {
   ];
 }
 
+export function rangeHasSchedules(schedules, dateFrom, dateTo) {
+  return (schedules || []).some((schedule) => {
+    const day = formatDateOnly(schedule?.work_date);
+
+    return Boolean(day) && day >= dateFrom && day <= dateTo;
+  });
+}
+
 export function mergeSchedulesInRange(existing, incoming, dateFrom, dateTo) {
   const kept = (existing || []).filter((schedule) => {
     const day = formatDateOnly(schedule?.work_date);

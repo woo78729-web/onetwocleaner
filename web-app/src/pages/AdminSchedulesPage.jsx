@@ -26,6 +26,7 @@ import {
   mergeSchedulesInRange,
   readScheduleCache,
   rememberScheduleRange,
+  rangeHasSchedules,
   scheduleRangeHasNewer,
   scheduleRangeIsFresh,
 } from '../utils/scheduleDataCache';
@@ -124,7 +125,7 @@ export default function AdminSchedulesPage() {
     anchor = currentDate,
     days = lookaheadDays,
     visibleDayCount = displayDays,
-    { force = false } = {},
+    { force = false, keepExistingOnEmpty = false } = {},
   ) => {
     const fetchRange = getAdminCalendarFetchRange(anchor, visibleDayCount);
     const availabilityRange = getAvailabilityLoadRange(days, anchor);
@@ -161,6 +162,14 @@ export default function AdminSchedulesPage() {
       });
 
       if (scheduleRangeHasNewer(loadedRangesRef.current, date_from, date_to, startedAt)) {
+        return;
+      }
+
+      if (
+        keepExistingOnEmpty
+        && payload.schedules.length === 0
+        && rangeHasSchedules(schedulesRef.current, date_from, date_to)
+      ) {
         return;
       }
 
@@ -203,7 +212,10 @@ export default function AdminSchedulesPage() {
   }, [currentDate, lookaheadDays, displayDays, loadSchedules]);
 
   useRefreshOnVisible(() => {
-    loadSchedules(currentDate, lookaheadDays, displayDays, { force: true }).catch((err) => setError(err.message));
+    loadSchedules(currentDate, lookaheadDays, displayDays, {
+      force: true,
+      keepExistingOnEmpty: true,
+    }).catch((err) => setError(err.message));
   });
 
   useEffect(() => {
