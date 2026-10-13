@@ -1,36 +1,138 @@
-const CAPTURE_BACKGROUND = '#ffffff';
+const CARD_WIDTH = 420;
+const SCALE = 2;
+const PADDING_X = 28;
+const PADDING_TOP = 28;
+const PADDING_BOTTOM = 28;
+const LABEL_WIDTH = 76;
+const COLUMN_GAP = 12;
+const ROW_PADDING_Y = 10;
+const VALUE_LINE_HEIGHT = 22;
+const FONT_FAMILY = '"Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif';
 
-function prepareElementForCapture(element) {
-  element.classList.add('schedule-success-modal--capture');
-  element.style.background = CAPTURE_BACKGROUND;
-  element.style.border = '1px solid rgba(16, 42, 67, 0.14)';
-  element.style.boxShadow = '0 12px 40px rgba(10, 37, 64, 0.12)';
-  element.style.backdropFilter = 'none';
-  element.style.webkitBackdropFilter = 'none';
-  // Avoid mobile max-height clipping 清洗台數 / 金額 in the downloaded screenshot.
-  element.style.maxHeight = 'none';
-  element.style.overflow = 'visible';
-  element.style.height = 'auto';
-  element.style.width = `${Math.max(element.scrollWidth, 360)}px`;
+function wrapText(ctx, text, maxWidth) {
+  const value = String(text || '-');
+  const lines = [];
+  let line = '';
 
-  element.querySelectorAll('.schedule-success-modal__actions, .schedule-success-modal__hint').forEach((node) => {
-    node.style.display = 'none';
-  });
+  for (const char of value) {
+    const next = line + char;
 
-  element.querySelectorAll('*').forEach((node) => {
-    node.style.backdropFilter = 'none';
-    node.style.webkitBackdropFilter = 'none';
-
-    if (node.classList?.contains('btn-primary')) {
-      node.style.background = '#007bff';
-      node.style.backgroundImage = 'none';
+    if (line && ctx.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = char;
+      continue;
     }
 
-    if (node.classList?.contains('btn-secondary')) {
-      node.style.background = '#f8fbff';
-      node.style.backgroundImage = 'none';
-    }
+    line = next;
+  }
+
+  if (line) {
+    lines.push(line);
+  }
+
+  return lines.length ? lines : ['-'];
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+  const corner = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + corner, y);
+  ctx.arcTo(x + width, y, x + width, y + height, corner);
+  ctx.arcTo(x + width, y + height, x, y + height, corner);
+  ctx.arcTo(x, y + height, x, y, corner);
+  ctx.arcTo(x, y, x + width, y, corner);
+  ctx.closePath();
+}
+
+function measureRows(ctx, rows, valueWidth) {
+  return rows.map((row) => {
+    const size = row.emphasis ? 17 : 15;
+    ctx.font = `${row.emphasis ? 800 : 600} ${size * SCALE}px ${FONT_FAMILY}`;
+    const lines = wrapText(ctx, row.value, valueWidth);
+    const lineHeight = row.emphasis ? 24 : VALUE_LINE_HEIGHT;
+    const height = Math.max(lineHeight, lines.length * lineHeight) + ROW_PADDING_Y * 2;
+
+    return { ...row, lines, lineHeight, height };
   });
+}
+
+function drawSuccessCard(rows) {
+  const valueWidth = (CARD_WIDTH - PADDING_X * 2 - LABEL_WIDTH - COLUMN_GAP) * SCALE;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    return null;
+  }
+
+  const measured = measureRows(ctx, rows, valueWidth);
+  const headerHeight = 108;
+  const bodyHeight = measured.reduce((total, row) => total + row.height, 0);
+  const height = PADDING_TOP + headerHeight + bodyHeight + PADDING_BOTTOM;
+
+  canvas.width = CARD_WIDTH * SCALE;
+  canvas.height = height * SCALE;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = 'rgba(16, 42, 67, 0.14)';
+  ctx.lineWidth = SCALE;
+  roundRect(ctx, SCALE, SCALE, canvas.width - SCALE * 2, canvas.height - SCALE * 2, 18 * SCALE);
+  ctx.stroke();
+
+  const centerX = canvas.width / 2;
+  const iconY = (PADDING_TOP + 26) * SCALE;
+  ctx.beginPath();
+  ctx.arc(centerX, iconY, 26 * SCALE, 0, Math.PI * 2);
+  ctx.fillStyle = '#e8f5e9';
+  ctx.fill();
+  ctx.fillStyle = '#2e7d32';
+  ctx.font = `800 ${28 * SCALE}px ${FONT_FAMILY}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✓', centerX, iconY + SCALE);
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `800 ${20 * SCALE}px ${FONT_FAMILY}`;
+  ctx.fillText('預約完成', centerX, (PADDING_TOP + 78) * SCALE);
+
+  let cursorY = (PADDING_TOP + headerHeight) * SCALE;
+  const contentLeft = PADDING_X * SCALE;
+  const valueLeft = (PADDING_X + LABEL_WIDTH + COLUMN_GAP) * SCALE;
+
+  measured.forEach((row, index) => {
+    const rowHeight = row.height * SCALE;
+
+    if (row.emphasis) {
+      ctx.fillStyle = '#e8f2ff';
+      roundRect(ctx, 16 * SCALE, cursorY, (CARD_WIDTH - 32) * SCALE, rowHeight, 10 * SCALE);
+      ctx.fill();
+    } else if (index < measured.length - 1) {
+      ctx.strokeStyle = 'rgba(16, 42, 67, 0.12)';
+      ctx.lineWidth = SCALE;
+      ctx.beginPath();
+      ctx.moveTo(contentLeft, cursorY + rowHeight);
+      ctx.lineTo(canvas.width - contentLeft, cursorY + rowHeight);
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#3d4f60';
+    ctx.font = `700 ${13 * SCALE}px ${FONT_FAMILY}`;
+    ctx.fillText(row.label, contentLeft, cursorY + ROW_PADDING_Y * SCALE);
+
+    ctx.fillStyle = row.emphasis ? '#102a43' : '#1a1a1a';
+    ctx.font = `${row.emphasis ? 800 : 600} ${row.emphasis ? 17 : 15}px ${FONT_FAMILY}`;
+    row.lines.forEach((line, lineIndex) => {
+      ctx.fillText(line, valueLeft, cursorY + ROW_PADDING_Y * SCALE + lineIndex * row.lineHeight * SCALE);
+    });
+
+    cursorY += rowHeight;
+  });
+
+  return canvas;
 }
 
 function triggerDownload(url, filename) {
@@ -44,105 +146,19 @@ function triggerDownload(url, filename) {
   link.remove();
 }
 
-async function canvasToBlob(canvas) {
-  const blob = await new Promise((resolve) => {
-    canvas.toBlob(resolve, 'image/png');
-  });
+export async function downloadSuccessCardJpg({ filename = 'screenshot.jpg', rows = [] } = {}) {
+  const canvas = drawSuccessCard(rows);
 
-  if (blob) {
-    return blob;
-  }
-
-  try {
-    const dataUrl = canvas.toDataURL('image/png');
-    if (!dataUrl || dataUrl.length <= 22) {
-      return null;
-    }
-
-    const response = await fetch(dataUrl);
-    return response.blob();
-  } catch {
-    return null;
-  }
-}
-
-async function downloadBlob(blob, filename) {
-  if (!blob) {
+  if (!canvas) {
     return false;
   }
 
-  const url = URL.createObjectURL(blob);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
-  try {
-    triggerDownload(url, filename);
-    return true;
-  } finally {
-    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-}
-
-async function copyBlobToClipboard(blob) {
-  if (!blob || !navigator.clipboard || !window.ClipboardItem) {
+  if (!dataUrl || dataUrl.length < 32) {
     return false;
   }
 
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type || 'image/png']: blob }),
-    ]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function captureElementAsPng(element, { filename = 'screenshot.png', scale = 2 } = {}) {
-  if (!element) {
-    return false;
-  }
-
-  const sandbox = document.createElement('div');
-  sandbox.setAttribute('aria-hidden', 'true');
-  sandbox.style.cssText = 'position:fixed;left:-100000px;top:0;z-index:-1;pointer-events:none;';
-
-  const clone = element.cloneNode(true);
-  prepareElementForCapture(clone);
-  sandbox.appendChild(clone);
-  document.body.appendChild(sandbox);
-
-  try {
-    // Force layout so html2canvas reads real dimensions off-screen.
-    void clone.offsetWidth;
-
-    const { default: html2canvas } = await import('html2canvas');
-    const safeScale = Math.min(scale, window.devicePixelRatio > 1 ? 2 : 1.5);
-    const canvas = await html2canvas(clone, {
-      backgroundColor: CAPTURE_BACKGROUND,
-      scale: safeScale,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: Math.max(clone.scrollWidth, 360),
-      windowHeight: Math.max(clone.scrollHeight, 240),
-    });
-
-    const blob = await canvasToBlob(canvas);
-
-    if (!blob) {
-      return false;
-    }
-
-    const downloaded = await downloadBlob(blob, filename);
-
-    if (downloaded) {
-      return true;
-    }
-
-    // Fallback when the browser blocks programmatic downloads.
-    return copyBlobToClipboard(blob);
-  } finally {
-    sandbox.remove();
-  }
+  triggerDownload(dataUrl, filename.endsWith('.jpg') ? filename : `${filename}.jpg`);
+  return true;
 }

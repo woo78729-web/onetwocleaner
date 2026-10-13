@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { captureElementAsPng } from '../utils/captureElement';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { downloadSuccessCardJpg } from '../utils/captureElement';
 import {
   buildScheduleSuccessScreenshotName,
-  formatScheduleSuccessDateTime,
-  formatSuccessSummaryAcUnits,
-  formatSuccessSummaryTotalPrice,
+  buildScheduleSuccessScreenshotRows,
 } from '../utils/scheduleCalendar';
 import './schedule-calendar.css';
 
@@ -15,16 +13,22 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
   const [screenshotHint, setScreenshotHint] = useState('');
   const [capturing, setCapturing] = useState(false);
 
+  const rows = useMemo(
+    () => (summary ? buildScheduleSuccessScreenshotRows(summary) : []),
+    [summary],
+  );
+
   const captureScreenshot = useCallback(async ({ silent = false } = {}) => {
-    if (!summary || !modalRef.current) {
+    if (!summary) {
       return false;
     }
 
     setCapturing(true);
 
     try {
-      const success = await captureElementAsPng(modalRef.current, {
+      const success = await downloadSuccessCardJpg({
         filename: buildScheduleSuccessScreenshotName(summary),
+        rows,
       });
 
       if (!silent || success) {
@@ -40,7 +44,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
     } finally {
       setCapturing(false);
     }
-  }, [summary]);
+  }, [rows, summary]);
 
   useEffect(() => {
     if (!open) {
@@ -59,7 +63,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
     let cancelled = false;
 
     const run = async () => {
-      // Wait two frames so fonts/layout settle, then capture.
+      // Let the dialog paint, then write the JPG without freezing the page.
       await new Promise((resolve) => {
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(resolve);
@@ -77,7 +81,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       }
     };
 
-    const timer = window.setTimeout(run, 900);
+    const timer = window.setTimeout(run, 80);
 
     return () => {
       cancelled = true;
@@ -88,12 +92,6 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
   if (!open || !summary) {
     return null;
   }
-
-  const addressList = Array.isArray(summary.customer_addresses)
-    ? summary.customer_addresses.map((item) => String(item || '').trim()).filter(Boolean)
-    : [];
-  const hasMultipleAddresses = addressList.length > 1;
-  const addressOrdinals = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
   return (
     <div
@@ -115,39 +113,15 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
         </h3>
 
         <dl className="schedule-success-modal__list">
-          <div className="schedule-success-modal__row">
-            <dt>清洗時間</dt>
-            <dd>{formatScheduleSuccessDateTime(summary)}</dd>
-          </div>
-          <div className="schedule-success-modal__row">
-            <dt>清洗人</dt>
-            <dd>{summary.employee_name || '未指定'}</dd>
-          </div>
-          <div className="schedule-success-modal__row schedule-success-modal__row--emphasis">
-            <dt>清洗台數</dt>
-            <dd>{formatSuccessSummaryAcUnits(summary)}</dd>
-          </div>
-          <div className="schedule-success-modal__row schedule-success-modal__row--emphasis">
-            <dt>金額</dt>
-            <dd>{formatSuccessSummaryTotalPrice(summary)}</dd>
-          </div>
-          {hasMultipleAddresses ? (
-            addressList.map((address, index) => (
-              <div key={`success-address-${index}`} className="schedule-success-modal__row">
-                <dt>{`第${addressOrdinals[index] || index + 1}地址`}</dt>
-                <dd>{address}</dd>
-              </div>
-            ))
-          ) : (
-            <div className="schedule-success-modal__row">
-              <dt>清洗地址</dt>
-              <dd>{addressList[0] || summary.customer_address || '-'}</dd>
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className={`schedule-success-modal__row${row.emphasis ? ' schedule-success-modal__row--emphasis' : ''}`}
+            >
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
             </div>
-          )}
-          <div className="schedule-success-modal__row">
-            <dt>客戶電話</dt>
-            <dd>{summary.customer_phone || '-'}</dd>
-          </div>
+          ))}
         </dl>
 
         {screenshotHint ? (

@@ -709,11 +709,43 @@ export function buildProjectSuccessSummary(form, employees = [], { mode = 'creat
   };
 }
 
+const SUCCESS_ADDRESS_ORDINALS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+export function buildScheduleSuccessScreenshotRows(summary) {
+  const addressList = Array.isArray(summary?.customer_addresses)
+    ? summary.customer_addresses.map((item) => String(item || '').trim()).filter(Boolean)
+    : [];
+  const rows = [
+    { label: '清洗時間', value: formatScheduleSuccessDateTime(summary) },
+    { label: '清洗人', value: summary?.employee_name || '未指定' },
+    { label: '清洗台數', value: formatSuccessSummaryAcUnits(summary), emphasis: true },
+    { label: '金額', value: formatSuccessSummaryTotalPrice(summary), emphasis: true },
+  ];
+
+  if (addressList.length > 1) {
+    addressList.forEach((address, index) => {
+      rows.push({
+        label: `第${SUCCESS_ADDRESS_ORDINALS[index] || index + 1}地址`,
+        value: address,
+      });
+    });
+  } else {
+    rows.push({
+      label: '清洗地址',
+      value: addressList[0] || summary?.customer_address || '-',
+    });
+  }
+
+  rows.push({ label: '客戶電話', value: summary?.customer_phone || '-' });
+
+  return rows;
+}
+
 export function buildScheduleSuccessScreenshotName(summary) {
   const customerName = String(summary?.customer_name || '客戶').replace(/[\\/:*?"<>|]/g, '').trim() || '客戶';
   const dateText = formatDateOnly(summary?.work_date) || 'date';
 
-  return `預約完成-${customerName}-${dateText}.png`;
+  return `預約完成-${customerName}-${dateText}.jpg`;
 }
 
 export function roundToScheduleTime(value) {

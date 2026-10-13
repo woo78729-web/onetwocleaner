@@ -20,10 +20,6 @@ export default defineConfig({
             return 'xlsx-vendor';
           }
 
-          if (id.includes('html2canvas')) {
-            return 'html2canvas-vendor';
-          }
-
           return undefined;
         },
       },
