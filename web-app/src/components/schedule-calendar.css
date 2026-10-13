@@ -3402,10 +3402,68 @@
 }
 
 .availability-month-overview__title {
-  margin: 12px 0 8px;
+  margin: 0;
   font-size: 15px;
   font-weight: 800;
   color: var(--tech-navy, #102a43);
+}
+
+.availability-month-grid__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.availability-month-grid__nav {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #245b86;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.availability-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.availability-month-grid__weekday,
+.availability-month-grid__day {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.availability-month-grid__weekday {
+  color: #607d8b;
+  font-weight: 700;
+}
+
+.availability-month-grid__day {
+  border: 0;
+  background: #f4f7f8;
+  color: #294052;
+}
+
+.availability-month-grid__day.has-jobs {
+  background: #d7efe4;
+  color: #0f6b45;
+  font-weight: 800;
+}
+
+.availability-month-grid__day.is-selected {
+  outline: 2px solid #245b86;
+}
+
+.availability-month-grid__day.is-empty {
+  background: transparent;
 }
 
 .availability-day-calendar--month .schedule-workspace.schedule-calendar,

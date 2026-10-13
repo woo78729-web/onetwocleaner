@@ -7,10 +7,7 @@ import {
   saveAvailabilityDays,
 } from '../utils/serviceAreas';
 import { formatChineseTimeValue, formatDateOnly, formatScheduleDateLabel } from '../utils/scheduleCalendar';
-import { ScheduleCalendar } from './ScheduleCalendar';
 import { ServiceAreaPicker } from './ServiceAreaPicker';
-
-const MONTH_ONLY_VIEWS = ['month'];
 
 function formatJobLine(job) {
   const start = formatChineseTimeValue(job.start_time);
@@ -164,25 +161,75 @@ function AvailabilityMobileDayRow({
 }
 
 function AvailabilityOverviewCalendar({ date, schedules, onNavigate }) {
-  const currentDate = useMemo(() => new Date(`${date}T12:00:00`), [date]);
+  const monthDate = useMemo(() => new Date(`${date}T12:00:00`), [date]);
+  const daysWithJobs = useMemo(() => {
+    const marked = new Set();
 
-  if (!date) {
+    schedules.forEach((schedule) => {
+      if (schedule?.type === 'leave') {
+        return;
+      }
+
+      const day = formatDateOnly(schedule.work_date);
+
+      if (day) {
+        marked.add(day);
+      }
+    });
+
+    return marked;
+  }, [schedules]);
+
+  if (!date || Number.isNaN(monthDate.getTime())) {
     return null;
   }
 
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const startOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [
+    ...Array.from({ length: startOffset }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => new Date(year, month, index + 1, 12)),
+  ];
+
   return (
     <div className="availability-day-calendar availability-day-calendar--month">
-      <p className="availability-month-overview__title">這個月該區有排班的日子</p>
-      <ScheduleCalendar
-        schedules={schedules}
-        leaves={[]}
-        currentDate={currentDate}
-        displayDays={1}
-        initialView="month"
-        onNavigate={onNavigate}
-        onDrillDown={onNavigate}
-        allowedViews={MONTH_ONLY_VIEWS}
-      />
+      <div className="availability-month-grid__header">
+        <button type="button" className="availability-month-grid__nav" onClick={() => onNavigate(new Date(year, month - 1, 1, 12))}>
+          上一個月
+        </button>
+        <p className="availability-month-overview__title">
+          {year}年 {month + 1}月　這個月該區有排班的日子
+        </p>
+        <button type="button" className="availability-month-grid__nav" onClick={() => onNavigate(new Date(year, month + 1, 1, 12))}>
+          下一個月
+        </button>
+      </div>
+      <div className="availability-month-grid" role="grid" aria-label="這個月有排班的日子">
+        {['一', '二', '三', '四', '五', '六', '日'].map((label) => (
+          <span key={label} className="availability-month-grid__weekday">{label}</span>
+        ))}
+        {cells.map((cell, index) => {
+          if (!cell) {
+            return <span key={`empty-${index}`} className="availability-month-grid__day is-empty" />;
+          }
+
+          const dayKey = formatDateOnly(cell);
+          const hasJobs = daysWithJobs.has(dayKey);
+
+          return (
+            <button
+              key={dayKey}
+              type="button"
+              className={`availability-month-grid__day${hasJobs ? ' has-jobs' : ''}${dayKey === date ? ' is-selected' : ''}`}
+              onClick={() => onNavigate(cell)}
+            >
+              {cell.getDate()}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
