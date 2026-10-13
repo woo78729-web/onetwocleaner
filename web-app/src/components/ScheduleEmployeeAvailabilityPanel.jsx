@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
@@ -268,7 +268,7 @@ function AvailabilityDayBoard({
   );
 }
 
-export function ScheduleEmployeeAvailabilityPanel({
+export const ScheduleEmployeeAvailabilityPanel = memo(function ScheduleEmployeeAvailabilityPanel({
   panelTitle = '區域師傅空檔',
   selectedAreas,
   onSelectedAreasChange,
@@ -348,7 +348,11 @@ export function ScheduleEmployeeAvailabilityPanel({
   }, [selectedAreas, lookaheadDays, selectedEmployeeId]);
 
   useEffect(() => {
-    loadAvailability();
+    const timer = window.setTimeout(() => {
+      loadAvailability();
+    }, 200);
+
+    return () => window.clearTimeout(timer);
   }, [loadAvailability]);
 
   useEffect(() => {
@@ -469,7 +473,7 @@ export function ScheduleEmployeeAvailabilityPanel({
         </p>
       )}
 
-      {loading && selectedAreas.length > 0 && (
+      {loading && selectedAreas.length > 0 && !visibleAvailability && (
         <p className="hint employee-availability-panel__empty">載入空檔中…</p>
       )}
 
@@ -516,4 +520,4 @@ export function ScheduleEmployeeAvailabilityPanel({
       )}
     </section>
   );
-}
+});

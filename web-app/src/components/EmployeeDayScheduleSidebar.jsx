@@ -44,18 +44,18 @@ export function EmployeeDayScheduleSidebar({
   highlightScheduleId = null,
   title = '當日班表',
 }) {
-  if (!employeeId || !workDate) {
+  if (!workDate) {
     return null;
   }
 
   const employee = employees.find((item) => String(item.id) === String(employeeId));
   const dateText = formatDateOnly(workDate);
-  const onLeave = isEmployeeOnLeave(leaves, employeeId, workDate);
+  const onLeave = employeeId ? isEmployeeOnLeave(leaves, employeeId, workDate) : false;
   const daySchedules = schedules
     .filter((schedule) => (
       schedule.type !== 'leave'
-      && String(schedule.user_id ?? schedule.user?.id) === String(employeeId)
       && formatDateOnly(schedule.work_date) === dateText
+      && (!employeeId || String(schedule.user_id ?? schedule.user?.id) === String(employeeId))
     ))
     .sort((left, right) => sortByStartTime(left, right));
 
@@ -64,7 +64,7 @@ export function EmployeeDayScheduleSidebar({
       <div className="employee-day-schedule-sidebar__header">
         <h3 className="employee-day-schedule-sidebar__title">{title}</h3>
         <p className="employee-day-schedule-sidebar__meta">
-          {employee?.name || '師傅'}
+          {employee?.name || '全部師傅'}
           <span className="employee-day-schedule-sidebar__date">{formatScheduleDateLabel(workDate)}</span>
         </p>
       </div>
@@ -87,6 +87,12 @@ export function EmployeeDayScheduleSidebar({
               className={`employee-day-schedule-sidebar__item${isCurrent ? ' is-current' : ''}`}
             >
               <div className="employee-day-schedule-sidebar__time">
+                {!employeeId && (
+                  <span>
+                    {schedule.user?.name || employees.find((item) => String(item.id) === String(schedule.user_id))?.name || '師傅'}
+                    {' '}
+                  </span>
+                )}
                 {formatChineseTimeValue(schedule.start_time)}
                 {' '}
                 →

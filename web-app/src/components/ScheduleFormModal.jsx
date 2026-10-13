@@ -198,7 +198,7 @@ export function ScheduleFormModal({
     onChange(patchScheduleForm(form, { mail_same_as_customer: false }));
   }
 
-  const showDaySchedule = Boolean(form.user_id && form.work_date);
+  const showDaySchedule = Boolean(form.work_date);
   const canManagePricing = canManageSchedulePricing(userRole);
   const showInvoiceOption = canManagePricing || userRole === 'customer_service';
 

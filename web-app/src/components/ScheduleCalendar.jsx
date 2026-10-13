@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { flushSync } from 'react-dom';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -182,7 +182,7 @@ function useDragAndDropCalendar(enabled) {
 
 
 
-export function ScheduleCalendar({
+export const ScheduleCalendar = memo(function ScheduleCalendar({
 
   schedules,
 
@@ -712,6 +712,6 @@ export function ScheduleCalendar({
 
   );
 
-}
+});
 
 

@@ -36,8 +36,8 @@ class SchedulePlanningController extends Controller
         $dateTo = now()->addDays($days)->toDateString();
 
         $schedules = DailySchedule::query()
-            ->whereDate('work_date', '>=', $dateFrom)
-            ->whereDate('work_date', '<=', $dateTo)
+            ->where('work_date', '>=', $dateFrom)
+            ->where('work_date', '<=', $dateTo)
             ->when(! empty($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
             ->orderBy('work_date')
             ->orderBy('start_time')
@@ -46,6 +46,16 @@ class SchedulePlanningController extends Controller
         $leaves = EmployeeLeave::query()
             ->with('user:id,name,account')
             ->when(! empty($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
+            ->where(function ($query) use ($dateFrom, $dateTo) {
+                $query
+                    ->where('leave_type', EmployeeLeave::TYPE_WEEKLY)
+                    ->orWhere(function ($inner) use ($dateFrom, $dateTo) {
+                        $inner
+                            ->where('leave_type', EmployeeLeave::TYPE_DATE)
+                            ->where('leave_date', '>=', $dateFrom)
+                            ->where('leave_date', '<=', $dateTo);
+                    });
+            })
             ->get();
 
         return $this->success(

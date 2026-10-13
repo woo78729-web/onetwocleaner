@@ -44,6 +44,51 @@ export function commitScheduleCache(startedAt, partial) {
   return cache;
 }
 
+export function scheduleRangeIsFresh(ranges, dateFrom, dateTo, maxAgeMs = 120000) {
+  const now = Date.now();
+
+  return ranges.some((range) => (
+    range.from <= dateFrom
+    && range.to >= dateTo
+    && now - range.at < maxAgeMs
+  ));
+}
+
+export function scheduleRangeHasNewer(ranges, dateFrom, dateTo, at) {
+  return ranges.some((range) => range.from === dateFrom && range.to === dateTo && range.at > at);
+}
+
+export function rememberScheduleRange(ranges, dateFrom, dateTo, at) {
+  return [
+    ...ranges.filter((range) => range.from !== dateFrom || range.to !== dateTo || range.at > at),
+    { from: dateFrom, to: dateTo, at },
+  ];
+}
+
+export function mergeSchedulesInRange(existing, incoming, dateFrom, dateTo) {
+  const kept = (existing || []).filter((schedule) => {
+    const day = formatDateOnly(schedule?.work_date);
+
+    return Boolean(day) && (day < dateFrom || day > dateTo);
+  });
+
+  return [...kept, ...(incoming || [])];
+}
+
+export function mergeLeavesInRange(existing, incoming, dateFrom, dateTo) {
+  const kept = (existing || []).filter((leave) => {
+    if (leave?.leave_type === 'weekly') {
+      return false;
+    }
+
+    const day = formatDateOnly(leave?.leave_date);
+
+    return Boolean(day) && (day < dateFrom || day > dateTo);
+  });
+
+  return [...kept, ...(incoming || [])];
+}
+
 export function mergeSchedulesForDate(startedAt, dateKey, daySchedules, extra = {}) {
   if (startedAt < cache.schedulesAt) {
     commitScheduleCache(startedAt, extra);

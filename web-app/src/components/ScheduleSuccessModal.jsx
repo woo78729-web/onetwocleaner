@@ -77,7 +77,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       }
     };
 
-    const timer = window.setTimeout(run, 120);
+    const timer = window.setTimeout(run, 900);
 
     return () => {
       cancelled = true;

@@ -20,7 +20,15 @@ import { useAuth } from '../context/AuthContext';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
 import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
-import { commitScheduleCache, readScheduleCache } from '../utils/scheduleDataCache';
+import {
+  commitScheduleCache,
+  mergeLeavesInRange,
+  mergeSchedulesInRange,
+  readScheduleCache,
+  rememberScheduleRange,
+  scheduleRangeHasNewer,
+  scheduleRangeIsFresh,
+} from '../utils/scheduleDataCache';
 import { loadAvailabilityDays } from '../utils/serviceAreas';
 import {
   buildSchedulePayload,
@@ -86,6 +94,9 @@ export default function AdminSchedulesPage() {
   const [pendingMailRedirect, setPendingMailRedirect] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const scheduleRequestRef = useRef(0);
+  const loadedRangesRef = useRef([]);
+  const schedulesRef = useRef(allSchedules);
+  const leavesRef = useRef(leaves);
 
   const schedules = useMemo(() => {
     let next = allSchedules;
@@ -113,22 +124,27 @@ export default function AdminSchedulesPage() {
     anchor = currentDate,
     days = lookaheadDays,
     visibleDayCount = displayDays,
+    { force = false } = {},
   ) => {
+    const fetchRange = getAdminCalendarFetchRange(anchor, visibleDayCount);
+    const availabilityRange = getAvailabilityLoadRange(days, anchor);
+    const calendarRange = getCalendarLoadRange(anchor);
+    const date_from = fetchRange.date_from < availabilityRange.date_from
+      ? fetchRange.date_from
+      : availabilityRange.date_from;
+    const date_to = fetchRange.date_to > availabilityRange.date_to
+      ? fetchRange.date_to
+      : availabilityRange.date_to;
+
+    if (!force && scheduleRangeIsFresh(loadedRangesRef.current, date_from, date_to)) {
+      return;
+    }
+
     const requestId = scheduleRequestRef.current + 1;
     const startedAt = Date.now();
     scheduleRequestRef.current = requestId;
     setError('');
     try {
-      const fetchRange = getAdminCalendarFetchRange(anchor, visibleDayCount);
-      const availabilityRange = getAvailabilityLoadRange(days, anchor);
-      const calendarRange = getCalendarLoadRange(anchor);
-      const date_from = fetchRange.date_from < availabilityRange.date_from
-        ? fetchRange.date_from
-        : availabilityRange.date_from;
-      const date_to = fetchRange.date_to > availabilityRange.date_to
-        ? fetchRange.date_to
-        : availabilityRange.date_to;
-
       const payload = await loadWithRetry(async () => {
         const [result, leaveResult] = await Promise.all([
           api.getCalendarSchedules({
@@ -144,15 +160,22 @@ export default function AdminSchedulesPage() {
         };
       });
 
-      if (scheduleRequestRef.current !== requestId) {
+      if (scheduleRangeHasNewer(loadedRangesRef.current, date_from, date_to, startedAt)) {
         return;
       }
 
-      setAllSchedules(payload.schedules);
-      setLeaves(payload.leaves);
-      commitScheduleCache(startedAt, {
-        schedules: payload.schedules,
-        leaves: payload.leaves,
+      loadedRangesRef.current = rememberScheduleRange(loadedRangesRef.current, date_from, date_to, startedAt);
+      setAllSchedules((previous) => {
+        const schedules = mergeSchedulesInRange(previous, payload.schedules, date_from, date_to);
+        schedulesRef.current = schedules;
+        commitScheduleCache(startedAt, { schedules, leaves: leavesRef.current });
+        return schedules;
+      });
+      setLeaves((previous) => {
+        const nextLeaves = mergeLeavesInRange(previous, payload.leaves, calendarRange.date_from, calendarRange.date_to);
+        leavesRef.current = nextLeaves;
+        commitScheduleCache(startedAt, { schedules: schedulesRef.current, leaves: nextLeaves });
+        return nextLeaves;
       });
     } catch (err) {
       if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
@@ -172,11 +195,15 @@ export default function AdminSchedulesPage() {
   }, [loadEmployees]);
 
   useEffect(() => {
-    loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
+    const timer = window.setTimeout(() => {
+      loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
+    }, 200);
+
+    return () => window.clearTimeout(timer);
   }, [currentDate, lookaheadDays, displayDays, loadSchedules]);
 
   useRefreshOnVisible(() => {
-    loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
+    loadSchedules(currentDate, lookaheadDays, displayDays, { force: true }).catch((err) => setError(err.message));
   });
 
   useEffect(() => {
@@ -192,7 +219,7 @@ export default function AdminSchedulesPage() {
     };
   }, [isMobile, mobileFilterOpen]);
 
-  function openCreate(slot) {
+  const openCreate = useCallback((slot) => {
     if (isSlotInPast(slot, { userRole })) {
       setError('不可預約過去的日期或時間，請選擇現在之後的時段');
       return;
@@ -210,16 +237,16 @@ export default function AdminSchedulesPage() {
     } catch (err) {
       setError(err?.message || '無法開啟派班表單');
     }
-  }
+  }, [allSchedules, selectedEmployeeId, userRole]);
 
-  function openSnapshot(schedule) {
+  const openSnapshot = useCallback((schedule) => {
     if (schedule?.type === 'leave') {
       return;
     }
     setSnapshotSchedule(schedule);
     setMessage('');
     setError('');
-  }
+  }, []);
 
   function closeSnapshot() {
     setSnapshotSchedule(null);
@@ -267,12 +294,16 @@ export default function AdminSchedulesPage() {
   }
 
   function patchScheduleTimes(scheduleId, fields) {
-    setAllSchedules((previous) => previous.map((item) => (
-      item.id === scheduleId ? { ...item, ...fields } : item
-    )));
+    setAllSchedules((previous) => {
+      const next = previous.map((item) => (
+        item.id === scheduleId ? { ...item, ...fields } : item
+      ));
+      schedulesRef.current = next;
+      return next;
+    });
   }
 
-  function persistScheduleTimeChange(schedule, start, end, calendarEvent = null) {
+  const persistScheduleTimeChange = useCallback((schedule, start, end, calendarEvent = null) => {
     const previous = {
       work_date: formatDateOnly(schedule.work_date),
       start_time: formatTimeValue(schedule.start_time),
@@ -311,15 +342,15 @@ export default function AdminSchedulesPage() {
         setError(err.message);
       });
     return true;
-  }
+  }, [userRole]);
 
-  function handleEventDrop({ event, start, end }) {
-    return persistScheduleTimeChange(event.resource, start, end, event);
-  }
+  const handleEventDrop = useCallback(({ event, start, end }) => (
+    persistScheduleTimeChange(event.resource, start, end, event)
+  ), [persistScheduleTimeChange]);
 
-  function handleEventResize({ event, start, end }) {
-    return persistScheduleTimeChange(event.resource, start, end, event);
-  }
+  const handleEventResize = useCallback(({ event, start, end }) => (
+    persistScheduleTimeChange(event.resource, start, end, event)
+  ), [persistScheduleTimeChange]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -354,7 +385,7 @@ export default function AdminSchedulesPage() {
         setPendingMailRedirect(payloads.some((item) => scheduleHasMailTrackingItem(item)));
       }
       setSuccessSummary(summaryPayload);
-      loadSchedules(currentDate).catch((err) => setError(err.message));
+      loadSchedules(currentDate, lookaheadDays, displayDays, { force: true }).catch((err) => setError(err.message));
     } catch (err) {
       setError(err.message);
       window.alert(err.message);
@@ -368,7 +399,7 @@ export default function AdminSchedulesPage() {
       await api.deleteSchedule(editId);
       setMessage('行程刪除成功');
       closeModal();
-      await loadSchedules(currentDate);
+      await loadSchedules(currentDate, lookaheadDays, displayDays, { force: true });
     } catch (err) {
       setError(err.message);
     }
@@ -393,17 +424,17 @@ export default function AdminSchedulesPage() {
       await api.deleteSchedule(schedule.id);
       setMessage('行程刪除成功');
       closeSnapshot();
-      await loadSchedules(currentDate);
+      await loadSchedules(currentDate, lookaheadDays, displayDays, { force: true });
     } catch (err) {
       setError(err.message);
     }
   }
 
-  function handleNavigate(date) {
+  const handleNavigate = useCallback((date) => {
     setCurrentDate(date);
-  }
+  }, []);
 
-  function handleRegionMonthChange(date) {
+  const handleRegionMonthChange = useCallback((date) => {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
       return;
     }
@@ -413,7 +444,7 @@ export default function AdminSchedulesPage() {
         ? current
         : date
     ));
-  }
+  }, []);
 
   function handleMiniRangeChange({ rangeStart, displayDays: nextDays }) {
     setCurrentDate(rangeStart);
@@ -434,7 +465,7 @@ export default function AdminSchedulesPage() {
     }
   }
 
-  function handleCalendarViewChange(view) {
+  const handleCalendarViewChange = useCallback((view) => {
     const nextDisplayDays = view === 'day'
       ? 1
       : view === 'week'
@@ -445,14 +476,16 @@ export default function AdminSchedulesPage() {
       setDisplayDays(nextDisplayDays);
     }
 
-    const nextSettings = {
-      ...calendarSettings,
-      defaultView: view,
-      displayDays: nextDisplayDays,
-    };
-    setCalendarSettings(nextSettings);
-    saveCalendarSettings(nextSettings);
-  }
+    setCalendarSettings((current) => {
+      const nextSettings = {
+        ...current,
+        defaultView: view,
+        displayDays: nextDisplayDays,
+      };
+      saveCalendarSettings(nextSettings);
+      return nextSettings;
+    });
+  }, [displayDays]);
 
   function goToday() {
     setCurrentDate(new Date());
@@ -481,7 +514,7 @@ export default function AdminSchedulesPage() {
     }
   }
 
-  function handleAvailabilityPickOpenSlot({ date, employeeId, slot, areas }) {
+  const handleAvailabilityPickOpenSlot = useCallback(({ date, employeeId, slot, areas }) => {
     const nextDate = new Date(`${date}T12:00:00`);
     setCurrentDate(nextDate);
     if (isMobile) {
@@ -510,7 +543,20 @@ export default function AdminSchedulesPage() {
     setModalOpen(true);
     setMessage('');
     setError('');
-  }
+  }, [isMobile, userRole]);
+
+  const handleSelectCalendarEvent = useCallback((event) => {
+    openSnapshot(event?.resource);
+  }, [openSnapshot]);
+
+  const handleDrillDown = useCallback((date) => {
+    navigate(`/admin/schedules/day/${formatDateOnly(date)}`);
+  }, [navigate]);
+
+  const canDragCalendarEvent = useCallback(
+    (schedule) => canDragScheduleEvent(schedule, userRole),
+    [userRole],
+  );
 
   const leaveRange = useMemo(() => getCalendarLoadRange(currentDate), [currentDate]);
 
@@ -723,12 +769,12 @@ export default function AdminSchedulesPage() {
                   currentDate={currentDate}
                   displayDays={displayDays}
                   onNavigate={handleNavigate}
-                  onSelectEvent={(event) => openSnapshot(event.resource)}
+                  onSelectEvent={handleSelectCalendarEvent}
                   onSelectSlot={openCreate}
-                  onDrillDown={(date) => navigate(`/admin/schedules/day/${formatDateOnly(date)}`)}
+                  onDrillDown={handleDrillDown}
                   onEventDrop={handleEventDrop}
                   onEventResize={handleEventResize}
-                  canDragEvent={(schedule) => canDragScheduleEvent(schedule, userRole)}
+                  canDragEvent={canDragCalendarEvent}
                   selectable
                   colorMode={calendarSettings.colorMode}
                   settings={calendarSettings}
@@ -802,7 +848,7 @@ export default function AdminSchedulesPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           onDelete={handleDelete}
-          onLeaveCreated={() => loadSchedules(currentDate)}
+          onLeaveCreated={() => loadSchedules(currentDate, lookaheadDays, displayDays, { force: true })}
         />
       </Layout>
     </PageErrorBoundary>
