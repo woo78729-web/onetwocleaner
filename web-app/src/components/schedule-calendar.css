@@ -1992,9 +1992,9 @@
 .schedule-workspace.schedule-calendar .rbc-day-slot .rbc-event {
   align-items: flex-start !important;
   justify-content: flex-start !important;
-  margin-left: 2px;
-  margin-right: 2px;
-  max-width: calc(100% - 4px);
+  margin-left: 1px;
+  margin-right: 1px;
+  max-width: none;
   overflow: hidden;
 }
 

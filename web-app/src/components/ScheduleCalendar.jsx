@@ -179,7 +179,59 @@ function useDragAndDropCalendar(enabled) {
 
 }
 
+function eventPersonKey(event) {
+  const resource = event?.resource || {};
+  const id = resource.user_id ?? resource.user?.id;
 
+  if (id == null || id === '') {
+    return `event-${event?.id ?? 'unknown'}`;
+  }
+
+  return String(id);
+}
+
+function eventPersonName(event) {
+  const resource = event?.resource || {};
+
+  return String(resource.user?.name || resource.user?.account || '');
+}
+
+function layoutEventsByPerson({ events, slotMetrics, accessors }) {
+  const people = [];
+  const seen = new Set();
+
+  events.forEach((event) => {
+    const key = eventPersonKey(event);
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    people.push({ key, name: eventPersonName(event) });
+  });
+
+  people.sort((left, right) => (
+    left.name.localeCompare(right.name, 'zh-Hant') || left.key.localeCompare(right.key)
+  ));
+
+  const columnWidth = 100 / Math.max(people.length, 1);
+
+  return events.map((event) => {
+    const range = slotMetrics.getRange(accessors.start(event), accessors.end(event));
+    const index = Math.max(0, people.findIndex((person) => person.key === eventPersonKey(event)));
+
+    return {
+      event,
+      style: {
+        top: range.top,
+        height: range.height,
+        width: columnWidth,
+        xOffset: index * columnWidth,
+      },
+    };
+  });
+}
 
 export const ScheduleCalendar = memo(function ScheduleCalendar({
 
@@ -598,7 +650,7 @@ export const ScheduleCalendar = memo(function ScheduleCalendar({
 
         components={components}
 
-        dayLayoutAlgorithm="overlap"
+        dayLayoutAlgorithm={layoutEventsByPerson}
 
         dayPropGetter={(date) => {
           const classNames = [];
