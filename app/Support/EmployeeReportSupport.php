@@ -276,6 +276,116 @@ class EmployeeReportSupport
         ];
     }
 
+    /**
+     * 列表只帶表格和調整視窗要用的欄位，避免把整筆班表圖送出去。
+     *
+     * @return array<string, mixed>
+     */
+    public static function adminListPayload(DailyReport $report): array
+    {
+        $financial = CompanyRemittanceSupport::financialBreakdown($report);
+        $companyInboundAmount = CompanyRemittanceSupport::displayCompanyInboundAmount($report);
+
+        if ($report->paid_to_company) {
+            $financial['company_inbound_amount'] = $companyInboundAmount;
+
+            if ($companyInboundAmount === 0) {
+                $financial['total_amount'] = 0;
+            }
+        }
+
+        return [
+            'id' => $report->id,
+            'schedule_id' => $report->schedule_id,
+            'planned_units' => $report->planned_units,
+            'completed_units' => $report->completed_units,
+            'skipped_units' => $report->skipped_units,
+            'skip_reason' => $report->skip_reason,
+            'unit_mismatch' => (bool) $report->unit_mismatch,
+            'has_tax' => (bool) $report->has_tax,
+            'needs_invoice_and_mail' => (bool) $report->needs_invoice_and_mail,
+            'needs_receipt_and_mail' => (bool) $report->needs_receipt_and_mail,
+            'temporary_request' => $report->temporary_request,
+            'temporary_postage' => (int) $report->temporary_postage,
+            'travel_allowance' => (int) $report->travel_allowance,
+            'report_invoice_tax_cost' => (int) $report->report_invoice_tax_cost,
+            'collected_amount' => (int) $report->collected_amount,
+            'paid_to_company' => (bool) $report->paid_to_company,
+            'total_amount' => $financial['total_amount'],
+            'employee_received' => $financial['employee_received'],
+            'company_inbound_amount' => $financial['company_inbound_amount'],
+            'company_remittance' => self::listRemittanceStatus($report),
+            'created_at' => $report->created_at?->toDateTimeString(),
+            'daily_schedule' => self::scheduleListFields($report),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function scheduleListFields(DailyReport $report): array
+    {
+        $schedule = $report->dailySchedule;
+
+        if (! $schedule) {
+            return [];
+        }
+
+        $user = $schedule->user;
+
+        return [
+            'id' => $schedule->id,
+            'work_date' => $schedule->work_date?->format('Y-m-d') ?? (string) $schedule->work_date,
+            'customer_name' => $schedule->customer_name,
+            'customer_address' => $schedule->customer_address,
+            'customer_phone' => $schedule->customer_phone,
+            'task_details' => $schedule->task_details,
+            'ac_units' => $schedule->ac_units,
+            'unit_price' => $schedule->unit_price,
+            'pricing_lines' => $schedule->pricing_lines,
+            'needs_invoice' => (bool) $schedule->needs_invoice,
+            'needs_receipt' => (bool) $schedule->needs_receipt,
+            'needs_mail' => (bool) $schedule->needs_mail,
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'account' => $user->account,
+            ] : null,
+        ];
+    }
+
+    /**
+     * @return array{status_label: string, is_overdue: bool}|null
+     */
+    private static function listRemittanceStatus(DailyReport $report): ?array
+    {
+        if (! $report->paid_to_company) {
+            return null;
+        }
+
+        $report->loadMissing(['companyRemittance', 'dailySchedule.cleaningProject']);
+        $project = $report->dailySchedule?->cleaningProject;
+
+        if ($project && (bool) $project->expects_company_remittance) {
+            $remittance = CompanyRemittanceSupport::rememberedProjectRemittance((int) $project->id);
+
+            if (! $remittance || (int) $remittance->report_id !== (int) $report->id) {
+                return null;
+            }
+        } else {
+            $remittance = $report->companyRemittance;
+        }
+
+        if (! $remittance) {
+            return null;
+        }
+
+        return [
+            'status_label' => CompanyRemittanceSupport::statusLabel($remittance->status),
+            'is_overdue' => CompanyRemittanceSupport::isOverdue($remittance),
+        ];
+    }
+
     public static function syncSchedulePlannedUnits(DailySchedule $schedule, int $completedUnits): DailySchedule
     {
         $plannedUnits = (int) $schedule->ac_units;

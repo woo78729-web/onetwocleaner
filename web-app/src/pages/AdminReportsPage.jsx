@@ -1,20 +1,46 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
 import { PageAlert } from '../components/PageAlert';
 import { Pagination } from '../components/Pagination';
-import { AdminReportEditModal } from '../components/AdminReportEditModal';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+
+const AdminReportEditModal = lazy(() => import('../components/AdminReportEditModal').then((module) => ({
+  default: module.AdminReportEditModal,
+})));
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('zh-TW');
 }
 
+function currentMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const format = (date) => {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${date.getFullYear()}-${month}-${day}`;
+  };
+
+  return {
+    date_from: format(start),
+    date_to: format(end),
+  };
+}
+
 export default function AdminReportsPage() {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({ date_from: '', date_to: '', user_id: '', page: 1, per_page: 15 });
+  const [filters, setFilters] = useState(() => ({
+    ...currentMonthRange(),
+    user_id: '',
+    page: 1,
+    per_page: 15,
+  }));
   const [employees, setEmployees] = useState([]);
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [editingReport, setEditingReport] = useState(null);
@@ -27,6 +53,7 @@ export default function AdminReportsPage() {
 
   async function loadReports(page = 1) {
     setError('');
+    setLoading(true);
 
     try {
       const result = await api.getReports({ ...filters, page });
@@ -34,6 +61,8 @@ export default function AdminReportsPage() {
       setFilters((prev) => ({ ...prev, page }));
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -81,6 +110,8 @@ export default function AdminReportsPage() {
 
       <PageAlert type="success" message={message} />
       <PageAlert type="error" message={error} />
+
+      {loading && !data && <p className="hint">載入這個月的回報…</p>}
 
       {data && (
         <>
@@ -206,12 +237,16 @@ export default function AdminReportsPage() {
         </>
       )}
 
-      <AdminReportEditModal
-        open={Boolean(editingReport)}
-        report={editingReport}
-        onClose={() => setEditingReport(null)}
-        onSave={handleSaveReport}
-      />
+      {editingReport && (
+        <Suspense fallback={null}>
+          <AdminReportEditModal
+            open
+            report={editingReport}
+            onClose={() => setEditingReport(null)}
+            onSave={handleSaveReport}
+          />
+        </Suspense>
+      )}
     </Layout>
   );
 }

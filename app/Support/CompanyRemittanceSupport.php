@@ -16,6 +16,9 @@ class CompanyRemittanceSupport
 
     public const REMIND_SNOOZE_DAYS = 7;
 
+    /** @var array<int, CompanyRemittance|null>|null */
+    private static ?array $firstProjectRemittance = null;
+
     public static function syncForReport(DailyReport $report): void
     {
         $report->loadMissing('dailySchedule.cleaningProject');
@@ -286,6 +289,54 @@ class CompanyRemittanceSupport
     }
 
     /**
+     * @param  iterable<int, int|string|null>  $projectIds
+     */
+    public static function rememberProjectRemittances(iterable $projectIds): void
+    {
+        $ids = collect($projectIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $grouped = $ids->isEmpty()
+            ? collect()
+            : CompanyRemittance::query()
+                ->whereIn('cleaning_project_id', $ids->all())
+                ->orderBy('id')
+                ->get()
+                ->groupBy(fn (CompanyRemittance $remittance) => (int) $remittance->cleaning_project_id);
+
+        self::$firstProjectRemittance = [];
+
+        foreach ($ids as $id) {
+            self::$firstProjectRemittance[$id] = $grouped->get($id)?->first();
+        }
+    }
+
+    public static function forgetProjectRemittances(): void
+    {
+        self::$firstProjectRemittance = null;
+    }
+
+    public static function rememberedProjectRemittance(int $projectId): ?CompanyRemittance
+    {
+        return self::firstProjectRemittance($projectId);
+    }
+
+    private static function firstProjectRemittance(int $projectId): ?CompanyRemittance
+    {
+        if (self::$firstProjectRemittance !== null) {
+            return self::$firstProjectRemittance[$projectId] ?? null;
+        }
+
+        return CompanyRemittance::query()
+            ->where('cleaning_project_id', $projectId)
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
      * @return array{
      *     total_amount:int,
      *     employee_received:int,
@@ -304,10 +355,7 @@ class CompanyRemittanceSupport
         $project = $report->dailySchedule?->cleaningProject;
 
         if ($project && (bool) $project->expects_company_remittance) {
-            $remittance = CompanyRemittance::query()
-                ->where('cleaning_project_id', $project->id)
-                ->orderBy('id')
-                ->first();
+            $remittance = self::firstProjectRemittance((int) $project->id);
 
             if (! $remittance || (int) $remittance->report_id !== (int) $report->id) {
                 return 0;
@@ -783,10 +831,7 @@ class CompanyRemittanceSupport
 
         if ($report->dailySchedule?->cleaningProject?->expects_company_remittance) {
             $project = $report->dailySchedule->cleaningProject;
-            $remittance = CompanyRemittance::query()
-                ->where('cleaning_project_id', $project->id)
-                ->orderBy('id')
-                ->first();
+            $remittance = self::firstProjectRemittance((int) $project->id);
 
             if (! $remittance || (int) $remittance->report_id !== (int) $report->id) {
                 return null;

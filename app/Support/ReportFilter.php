@@ -40,27 +40,41 @@ class ReportFilter
     public static function apply(array $filters): Builder
     {
         return DailyReport::query()
+            ->select('daily_reports.*')
+            ->join('daily_schedules', 'daily_schedules.id', '=', 'daily_reports.schedule_id')
             ->with([
-                'dailySchedule' => fn ($query) => $query->with([
+                'dailySchedule' => fn ($query) => $query->select([
+                    'id',
+                    'user_id',
+                    'cleaning_project_id',
+                    'work_date',
+                    'customer_name',
+                    'customer_address',
+                    'customer_phone',
+                    'task_details',
+                    'ac_units',
+                    'unit_price',
+                    'pricing_lines',
+                    'needs_invoice',
+                    'needs_receipt',
+                    'needs_mail',
+                ])->with([
                     'user:id,name,account',
-                    'cleaningProject',
+                    'cleaningProject:id,project_code,title,customer_name,customer_address,customer_phone,expects_company_remittance',
                 ]),
                 'companyRemittance',
             ])
-            ->whereHas('dailySchedule', function ($scheduleQuery) use ($filters) {
-                if (! empty($filters['date_from'])) {
-                    $scheduleQuery->whereDate('work_date', '>=', $filters['date_from']);
-                }
-
-                if (! empty($filters['date_to'])) {
-                    $scheduleQuery->whereDate('work_date', '<=', $filters['date_to']);
-                }
-
-                if (! empty($filters['user_id'])) {
-                    $scheduleQuery->where('user_id', $filters['user_id']);
-                }
+            ->when(! empty($filters['date_from']), function ($query) use ($filters) {
+                $query->where('daily_schedules.work_date', '>=', $filters['date_from']);
             })
-            ->orderByDesc('created_at');
+            ->when(! empty($filters['date_to']), function ($query) use ($filters) {
+                $query->where('daily_schedules.work_date', '<=', $filters['date_to']);
+            })
+            ->when(! empty($filters['user_id']), function ($query) use ($filters) {
+                $query->where('daily_schedules.user_id', $filters['user_id']);
+            })
+            ->orderByDesc('daily_schedules.work_date')
+            ->orderByDesc('daily_reports.id');
     }
 
     /**
@@ -71,39 +85,51 @@ class ReportFilter
      */
     public static function collapseForAdminList(Collection $reports): Collection
     {
-        $standalone = collect();
-        /** @var array<int, list<DailyReport>> $projectGroups */
-        $projectGroups = [];
+        $projectIds = $reports
+            ->map(fn (DailyReport $report) => $report->dailySchedule?->cleaning_project_id)
+            ->filter()
+            ->unique()
+            ->values();
 
-        foreach ($reports as $report) {
-            $projectId = $report->dailySchedule?->cleaning_project_id;
+        CompanyRemittanceSupport::rememberProjectRemittances($projectIds);
 
-            if (! $projectId) {
-                $standalone->push(EmployeeReportSupport::reportPayload($report));
-                continue;
-            }
+        try {
+            $standalone = collect();
+            /** @var array<int, list<DailyReport>> $projectGroups */
+            $projectGroups = [];
 
-            $projectGroups[(int) $projectId][] = $report;
-        }
+            foreach ($reports as $report) {
+                $projectId = $report->dailySchedule?->cleaning_project_id;
 
-        $merged = $standalone;
-
-        foreach ($projectGroups as $group) {
-            $merged->push(self::mergeProjectReportGroup(collect($group)));
-        }
-
-        return $merged
-            ->sortByDesc(function (array $payload) {
-                $workDate = $payload['daily_schedule']['work_date'] ?? '';
-                if (is_string($workDate) && strlen($workDate) >= 10) {
-                    $workDate = substr($workDate, 0, 10);
+                if (! $projectId) {
+                    $standalone->push(EmployeeReportSupport::adminListPayload($report));
+                    continue;
                 }
 
-                $createdAt = $payload['created_at'] ?? '';
+                $projectGroups[(int) $projectId][] = $report;
+            }
 
-                return $workDate.'|'.$createdAt;
-            })
-            ->values();
+            $merged = $standalone;
+
+            foreach ($projectGroups as $group) {
+                $merged->push(self::mergeProjectReportGroup(collect($group)));
+            }
+
+            return $merged
+                ->sortByDesc(function (array $payload) {
+                    $workDate = $payload['daily_schedule']['work_date'] ?? '';
+                    if (is_string($workDate) && strlen($workDate) >= 10) {
+                        $workDate = substr($workDate, 0, 10);
+                    }
+
+                    $createdAt = $payload['created_at'] ?? '';
+
+                    return $workDate.'|'.$createdAt;
+                })
+                ->values();
+        } finally {
+            CompanyRemittanceSupport::forgetProjectRemittances();
+        }
     }
 
     /**
@@ -121,8 +147,8 @@ class ReportFilter
             ->values();
 
         $latest = $sorted->last();
-        $base = EmployeeReportSupport::reportPayload($latest);
-        $payloads = $sorted->map(fn (DailyReport $report) => EmployeeReportSupport::reportPayload($report));
+        $base = EmployeeReportSupport::adminListPayload($latest);
+        $payloads = $sorted->map(fn (DailyReport $report) => EmployeeReportSupport::adminListPayload($report));
         $project = $latest->dailySchedule?->cleaningProject;
 
         $employeeNames = $sorted
