@@ -10,6 +10,7 @@ import { RemittanceAlertHost } from './components/RemittanceAlertHost';
 import { PersistentLayout } from './components/Layout';
 import { lazyRetry } from './utils/lazyRetry';
 import { preloadAdminHome } from './utils/preloadAdminHome';
+import AdminSchedulesPage from './pages/AdminSchedulesPage';
 
 preloadAdminHome();
 
@@ -17,7 +18,6 @@ const AdminReportsPage = lazy(lazyRetry(() => import('./pages/AdminReportsPage')
 const AdminAccountingPage = lazy(lazyRetry(() => import('./pages/AdminAccountingPage')));
 const AdminPerformancePage = lazy(lazyRetry(() => import('./pages/AdminPerformancePage')));
 const AdminStaffPage = lazy(lazyRetry(() => import('./pages/AdminStaffPage')));
-const AdminSchedulesPage = lazy(lazyRetry(() => import('./pages/AdminSchedulesPage')));
 const AdminRegionalSchedulingPage = lazy(lazyRetry(() => import('./pages/AdminRegionalSchedulingPage')));
 const AdminLeaveCalendarPage = lazy(lazyRetry(() => import('./pages/AdminLeaveCalendarPage')));
 const AdminScheduleDayPage = lazy(lazyRetry(() => import('./pages/AdminScheduleDayPage')));

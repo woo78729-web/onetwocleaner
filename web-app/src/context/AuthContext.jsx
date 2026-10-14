@@ -1,15 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, hasStoredAuthToken } from '../api/client';
-import { forgetLastRole, preloadAdminHome, rememberLastRole } from '../utils/preloadAdminHome';
+import { forgetLastRole, preloadAdminHome, readCachedUser, rememberCachedUser, rememberLastRole } from '../utils/preloadAdminHome';
 
 const AuthContext = createContext(null);
 const AUTH_BOOT_TIMEOUT_MS = 15000;
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(() => hasStoredAuthToken());
+  const [user, setUser] = useState(() => (hasStoredAuthToken() ? readCachedUser() : null));
+  const [loading, setLoading] = useState(() => hasStoredAuthToken() && !readCachedUser());
   const [error, setError] = useState('');
   const userRef = useRef(null);
+  const trustedCacheRef = useRef(hasStoredAuthToken() && Boolean(readCachedUser()));
 
   useEffect(() => {
     userRef.current = user;
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(async () => {
     const result = await api.me();
     rememberLastRole(result.data?.role);
+    rememberCachedUser(result.data);
     preloadAdminHome();
     setUser(result.data);
     return result.data;
@@ -34,6 +36,7 @@ export function AuthProvider({ children }) {
       }
 
       setUser(null);
+      forgetLastRole();
       window.dispatchEvent(new Event('ac:logout'));
     }
 
@@ -54,7 +57,13 @@ export function AuthProvider({ children }) {
     }
 
     const timeoutId = window.setTimeout(() => {
+      if (trustedCacheRef.current) {
+        finishBoot();
+        return;
+      }
+
       api.setToken('');
+      forgetLastRole();
       setUser(null);
       setError('連線逾時，請重新登入');
       window.dispatchEvent(new Event('ac:logout'));
@@ -65,6 +74,7 @@ export function AuthProvider({ children }) {
       .then((result) => {
         if (!cancelled) {
           rememberLastRole(result.data?.role);
+          rememberCachedUser(result.data);
           preloadAdminHome();
           setUser(result.data);
           setError('');
@@ -101,6 +111,7 @@ export function AuthProvider({ children }) {
       setError('');
       const result = await api.login(account, password, remember);
       rememberLastRole(result.data.user?.role);
+      rememberCachedUser(result.data.user);
       preloadAdminHome();
       window.dispatchEvent(new Event('ac:login'));
       setUser(result.data.user);
@@ -111,6 +122,7 @@ export function AuthProvider({ children }) {
       api.setToken(token, { remember });
       const result = await api.me();
       rememberLastRole(result.data?.role);
+      rememberCachedUser(result.data);
       preloadAdminHome();
       window.dispatchEvent(new Event('ac:login'));
       setUser(result.data);

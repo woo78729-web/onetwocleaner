@@ -9,10 +9,12 @@ import { ScheduleEmployeeAvailabilityPanel } from '../components/ScheduleEmploye
 import { ScheduleAreaFilter } from '../components/ScheduleAreaFilter';
 import { ServiceAreaPicker } from '../components/ServiceAreaPicker';
 import { PageAlert } from '../components/PageAlert';
+import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import { EmployeeAvatar } from '../components/EmployeeAvatar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { api, hasStoredAuthToken } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { isAdminHomeRole } from '../utils/preloadAdminHome';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
 import { isAbortError, loadWithRetry, useRefreshOnVisible } from '../utils/pageLoad';
@@ -54,19 +56,15 @@ import {
 } from '../utils/scheduleCalendar';
 import '../components/schedule-calendar.css';
 
-const scheduleCalendarPromise = import('../components/ScheduleCalendar');
-const scheduleFormModalPromise = import('../components/ScheduleFormModal');
-const scheduleSnapshotModalPromise = import('../components/ScheduleSnapshotModal');
-const scheduleSuccessModalPromise = import('../components/ScheduleSuccessModal');
-
-function lazyNamed(promise, name) {
-  return lazy(() => promise.then((module) => ({ default: module[name] })));
-}
-
-const ScheduleCalendar = lazyNamed(scheduleCalendarPromise, 'ScheduleCalendar');
-const ScheduleFormModal = lazyNamed(scheduleFormModalPromise, 'ScheduleFormModal');
-const ScheduleSnapshotModal = lazyNamed(scheduleSnapshotModalPromise, 'ScheduleSnapshotModal');
-const ScheduleSuccessModal = lazyNamed(scheduleSuccessModalPromise, 'ScheduleSuccessModal');
+const ScheduleFormModal = lazy(() => import('../components/ScheduleFormModal').then((module) => ({
+  default: module.ScheduleFormModal,
+})));
+const ScheduleSnapshotModal = lazy(() => import('../components/ScheduleSnapshotModal').then((module) => ({
+  default: module.ScheduleSnapshotModal,
+})));
+const ScheduleSuccessModal = lazy(() => import('../components/ScheduleSuccessModal').then((module) => ({
+  default: module.ScheduleSuccessModal,
+})));
 
 function getInitialDisplayDays(settings) {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
@@ -115,7 +113,9 @@ function primeVisibleBoard(anchor = new Date(), displayDays = 7) {
   return visibleBoardPrime;
 }
 
-if (typeof window !== 'undefined' && hasStoredAuthToken()) {
+if (typeof window !== 'undefined' && hasStoredAuthToken() && (
+  isAdminHomeRole() || window.location.pathname.includes('/admin/schedules')
+)) {
   primeVisibleBoard(new Date(), getInitialDisplayDays(loadCalendarSettings()));
 }
 
@@ -318,7 +318,14 @@ export default function AdminSchedulesPage() {
   }, [currentDate, lookaheadDays, displayDays]);
 
   useEffect(() => {
-    import('./AdminScheduleDayPage');
+    const timer = window.setTimeout(() => {
+      import('./AdminScheduleDayPage');
+      import('../components/ScheduleFormModal');
+      import('../components/ScheduleSnapshotModal');
+      import('../components/ScheduleSuccessModal');
+    }, 800);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -897,7 +904,6 @@ export default function AdminSchedulesPage() {
               {!isMobile && renderEmployeeStrip()}
 
               <div className="schedule-calendar-host">
-                <Suspense fallback={<p className="hint schedule-calendar-pending">班表載入中…</p>}>
                 <ScheduleCalendar
                   schedules={schedules}
                   leaves={calendarLeaves}
@@ -918,7 +924,6 @@ export default function AdminSchedulesPage() {
                   initialView={isMobile ? 'month' : null}
                   hidePrice={!canManageSchedulePricing(userRole)}
                 />
-                </Suspense>
               </div>
             </div>
           </div>
@@ -954,6 +959,7 @@ export default function AdminSchedulesPage() {
         <PageAlert type="success" message={message} />
         <PageAlert type="error" message={error} />
 
+        {(modalOpen || snapshotSchedule || successSummary) && (
         <Suspense fallback={null}>
         <ScheduleSuccessModal
           open={Boolean(successSummary)}
@@ -989,6 +995,7 @@ export default function AdminSchedulesPage() {
           onLeaveCreated={() => loadSchedules(currentDate, lookaheadDays, displayDays, { force: true })}
         />
         </Suspense>
+        )}
       </Layout>
     </PageErrorBoundary>
   );
