@@ -9,6 +9,9 @@ import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import { RemittanceAlertHost } from './components/RemittanceAlertHost';
 import { PersistentLayout } from './components/Layout';
 import { lazyRetry } from './utils/lazyRetry';
+import { preloadAdminHome } from './utils/preloadAdminHome';
+
+preloadAdminHome();
 
 const AdminReportsPage = lazy(lazyRetry(() => import('./pages/AdminReportsPage')));
 const AdminAccountingPage = lazy(lazyRetry(() => import('./pages/AdminAccountingPage')));

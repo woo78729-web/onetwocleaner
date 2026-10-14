@@ -52,6 +52,11 @@
   min-width: 0;
 }
 
+.schedule-calendar-pending {
+  margin: 0;
+  padding: 28px 16px;
+}
+
 .schedule-calendar-scroll {
   flex: 1 1 auto;
   min-height: clamp(420px, 62vh, 780px);

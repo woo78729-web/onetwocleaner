@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PageErrorBoundary } from '../components/PageErrorBoundary';
@@ -9,13 +9,9 @@ import { ScheduleEmployeeAvailabilityPanel } from '../components/ScheduleEmploye
 import { ScheduleAreaFilter } from '../components/ScheduleAreaFilter';
 import { ServiceAreaPicker } from '../components/ServiceAreaPicker';
 import { PageAlert } from '../components/PageAlert';
-import { ScheduleCalendar } from '../components/ScheduleCalendar';
-import { ScheduleFormModal } from '../components/ScheduleFormModal';
-import { ScheduleSnapshotModal } from '../components/ScheduleSnapshotModal';
-import { ScheduleSuccessModal } from '../components/ScheduleSuccessModal';
 import { EmployeeAvatar } from '../components/EmployeeAvatar';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { api } from '../api/client';
+import { api, hasStoredAuthToken } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { canAccess, canManageSchedulePricing } from '../utils/permissions';
 import { loadCalendarSettings, saveCalendarSettings } from '../utils/calendarSettings';
@@ -49,12 +45,28 @@ import {
   getAdminCalendarFetchRange,
   getAvailabilityLoadRange,
   getCalendarLoadRange,
+  getVisibleScheduleRange,
   hasScheduleReport,
   isSlotInPast,
   scheduleToForm,
   slotToForm,
   applyPriceCalculation,
 } from '../utils/scheduleCalendar';
+import '../components/schedule-calendar.css';
+
+const scheduleCalendarPromise = import('../components/ScheduleCalendar');
+const scheduleFormModalPromise = import('../components/ScheduleFormModal');
+const scheduleSnapshotModalPromise = import('../components/ScheduleSnapshotModal');
+const scheduleSuccessModalPromise = import('../components/ScheduleSuccessModal');
+
+function lazyNamed(promise, name) {
+  return lazy(() => promise.then((module) => ({ default: module[name] })));
+}
+
+const ScheduleCalendar = lazyNamed(scheduleCalendarPromise, 'ScheduleCalendar');
+const ScheduleFormModal = lazyNamed(scheduleFormModalPromise, 'ScheduleFormModal');
+const ScheduleSnapshotModal = lazyNamed(scheduleSnapshotModalPromise, 'ScheduleSnapshotModal');
+const ScheduleSuccessModal = lazyNamed(scheduleSuccessModalPromise, 'ScheduleSuccessModal');
 
 function getInitialDisplayDays(settings) {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
@@ -62,6 +74,49 @@ function getInitialDisplayDays(settings) {
   }
 
   return Math.min(7, Math.max(1, settings.displayDays || 7));
+}
+
+let visibleBoardPrime = null;
+
+function rangesMatch(left, right) {
+  return left?.date_from === right?.date_from && left?.date_to === right?.date_to;
+}
+
+async function fetchBoardRange(range) {
+  const [result, leaveResult] = await loadWithRetry(async () => Promise.all([
+    api.getCalendarSchedules(range),
+    api.getPlanningLeaves(range),
+  ]));
+
+  return {
+    schedules: result.data?.schedules || [],
+    leaves: leaveResult.data?.leaves || [],
+  };
+}
+
+function primeVisibleBoard(anchor = new Date(), displayDays = 7) {
+  const range = getVisibleScheduleRange(anchor, displayDays);
+  const key = `${range.date_from}|${range.date_to}`;
+
+  if (visibleBoardPrime?.key === key && Date.now() - visibleBoardPrime.at < 15000) {
+    return visibleBoardPrime;
+  }
+
+  const at = Date.now();
+  const promise = fetchBoardRange(range).catch((error) => {
+    if (visibleBoardPrime?.key === key && visibleBoardPrime.at === at) {
+      visibleBoardPrime = null;
+    }
+
+    throw error;
+  });
+  visibleBoardPrime = { key, at, range, promise };
+
+  return visibleBoardPrime;
+}
+
+if (typeof window !== 'undefined' && hasStoredAuthToken()) {
+  primeVisibleBoard(new Date(), getInitialDisplayDays(loadCalendarSettings()));
 }
 
 export default function AdminSchedulesPage() {
@@ -127,67 +182,134 @@ export default function AdminSchedulesPage() {
     visibleDayCount = displayDays,
     { force = false, keepExistingOnEmpty = false } = {},
   ) => {
+    const visibleRange = getVisibleScheduleRange(anchor, visibleDayCount);
     const fetchRange = getAdminCalendarFetchRange(anchor, visibleDayCount);
     const availabilityRange = getAvailabilityLoadRange(days, anchor);
-    const calendarRange = getCalendarLoadRange(anchor);
     const date_from = fetchRange.date_from < availabilityRange.date_from
       ? fetchRange.date_from
       : availabilityRange.date_from;
     const date_to = fetchRange.date_to > availabilityRange.date_to
       ? fetchRange.date_to
       : availabilityRange.date_to;
+    const wideRange = { date_from, date_to };
 
     if (!force && scheduleRangeIsFresh(loadedRangesRef.current, date_from, date_to)) {
       return;
+    }
+
+    if (force) {
+      visibleBoardPrime = null;
     }
 
     const requestId = scheduleRequestRef.current + 1;
     const startedAt = Date.now();
     scheduleRequestRef.current = requestId;
     setError('');
-    try {
-      const payload = await loadWithRetry(async () => {
-        const [result, leaveResult] = await Promise.all([
-          api.getCalendarSchedules({
-            date_from,
-            date_to,
-          }),
-          api.getPlanningLeaves(calendarRange),
-        ]);
 
-        return {
-          schedules: result.data?.schedules || [],
-          leaves: leaveResult.data?.leaves || [],
-        };
-      });
+    const applyBoard = (payload, scheduleRange, leaveRange, defer) => {
+      if (scheduleRequestRef.current !== requestId) {
+        return false;
+      }
 
-      if (scheduleRangeHasNewer(loadedRangesRef.current, date_from, date_to, startedAt)) {
-        return;
+      if (scheduleRangeHasNewer(loadedRangesRef.current, scheduleRange.date_from, scheduleRange.date_to, startedAt)) {
+        return false;
       }
 
       if (
         keepExistingOnEmpty
         && payload.schedules.length === 0
-        && rangeHasSchedules(schedulesRef.current, date_from, date_to)
+        && rangeHasSchedules(schedulesRef.current, scheduleRange.date_from, scheduleRange.date_to)
       ) {
+        return false;
+      }
+
+      const write = () => {
+        loadedRangesRef.current = rememberScheduleRange(
+          loadedRangesRef.current,
+          scheduleRange.date_from,
+          scheduleRange.date_to,
+          startedAt,
+        );
+        setAllSchedules((previous) => {
+          const schedules = mergeSchedulesInRange(
+            previous,
+            payload.schedules,
+            scheduleRange.date_from,
+            scheduleRange.date_to,
+          );
+          schedulesRef.current = schedules;
+          commitScheduleCache(startedAt, { schedules, leaves: leavesRef.current });
+          return schedules;
+        });
+        setLeaves((previous) => {
+          const nextLeaves = mergeLeavesInRange(
+            previous,
+            payload.leaves,
+            leaveRange.date_from,
+            leaveRange.date_to,
+          );
+          leavesRef.current = nextLeaves;
+          commitScheduleCache(startedAt, { schedules: schedulesRef.current, leaves: nextLeaves });
+          return nextLeaves;
+        });
+      };
+
+      if (defer) {
+        startTransition(write);
+      } else {
+        write();
+      }
+
+      return true;
+    };
+
+    const visibleAlreadyLoaded = !force && scheduleRangeIsFresh(
+      loadedRangesRef.current,
+      visibleRange.date_from,
+      visibleRange.date_to,
+    );
+    let visibleReady = visibleAlreadyLoaded || schedulesRef.current.length > 0;
+
+    if (!visibleAlreadyLoaded) {
+      try {
+        const primed = !force && rangesMatch(visibleBoardPrime?.range, visibleRange)
+          ? visibleBoardPrime
+          : null;
+        const payload = primed
+          ? await primed.promise
+          : await fetchBoardRange(visibleRange);
+
+        if (scheduleRequestRef.current !== requestId) {
+          return;
+        }
+
+        visibleReady = applyBoard(payload, visibleRange, visibleRange, false) || visibleReady;
+      } catch (err) {
+        if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
+          return;
+        }
+
+        if (!visibleReady) {
+          setError(err.message);
+        }
+      }
+    }
+
+    if (rangesMatch(visibleRange, wideRange)) {
+      return;
+    }
+
+    try {
+      const payload = await fetchBoardRange(wideRange);
+
+      if (scheduleRequestRef.current !== requestId) {
         return;
       }
 
-      loadedRangesRef.current = rememberScheduleRange(loadedRangesRef.current, date_from, date_to, startedAt);
-      setAllSchedules((previous) => {
-        const schedules = mergeSchedulesInRange(previous, payload.schedules, date_from, date_to);
-        schedulesRef.current = schedules;
-        commitScheduleCache(startedAt, { schedules, leaves: leavesRef.current });
-        return schedules;
-      });
-      setLeaves((previous) => {
-        const nextLeaves = mergeLeavesInRange(previous, payload.leaves, calendarRange.date_from, calendarRange.date_to);
-        leavesRef.current = nextLeaves;
-        commitScheduleCache(startedAt, { schedules: schedulesRef.current, leaves: nextLeaves });
-        return nextLeaves;
-      });
+      applyBoard(payload, wideRange, wideRange, true);
+      setError('');
     } catch (err) {
-      if (scheduleRequestRef.current !== requestId || isAbortError(err)) {
+      if (scheduleRequestRef.current !== requestId || isAbortError(err) || visibleReady) {
         return;
       }
 
@@ -204,9 +326,10 @@ export default function AdminSchedulesPage() {
   }, [loadEmployees]);
 
   useEffect(() => {
+    const delay = loadedRangesRef.current.length ? 200 : 0;
     const timer = window.setTimeout(() => {
       loadSchedules(currentDate, lookaheadDays, displayDays).catch((err) => setError(err.message));
-    }, 200);
+    }, delay);
 
     return () => window.clearTimeout(timer);
   }, [currentDate, lookaheadDays, displayDays, loadSchedules]);
@@ -774,6 +897,7 @@ export default function AdminSchedulesPage() {
               {!isMobile && renderEmployeeStrip()}
 
               <div className="schedule-calendar-host">
+                <Suspense fallback={<p className="hint schedule-calendar-pending">班表載入中…</p>}>
                 <ScheduleCalendar
                   schedules={schedules}
                   leaves={calendarLeaves}
@@ -794,6 +918,7 @@ export default function AdminSchedulesPage() {
                   initialView={isMobile ? 'month' : null}
                   hidePrice={!canManageSchedulePricing(userRole)}
                 />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -829,6 +954,7 @@ export default function AdminSchedulesPage() {
         <PageAlert type="success" message={message} />
         <PageAlert type="error" message={error} />
 
+        <Suspense fallback={null}>
         <ScheduleSuccessModal
           open={Boolean(successSummary)}
           summary={successSummary}
@@ -862,6 +988,7 @@ export default function AdminSchedulesPage() {
           onDelete={handleDelete}
           onLeaveCreated={() => loadSchedules(currentDate, lookaheadDays, displayDays, { force: true })}
         />
+        </Suspense>
       </Layout>
     </PageErrorBoundary>
   );
