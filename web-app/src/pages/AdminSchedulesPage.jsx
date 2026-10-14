@@ -9,7 +9,6 @@ import { ScheduleEmployeeAvailabilityPanel } from '../components/ScheduleEmploye
 import { ScheduleAreaFilter } from '../components/ScheduleAreaFilter';
 import { ServiceAreaPicker } from '../components/ServiceAreaPicker';
 import { PageAlert } from '../components/PageAlert';
-import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import { EmployeeAvatar } from '../components/EmployeeAvatar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { api, hasStoredAuthToken } from '../api/client';
@@ -56,6 +55,9 @@ import {
 } from '../utils/scheduleCalendar';
 import '../components/schedule-calendar.css';
 
+const ScheduleCalendar = lazy(() => import('../components/ScheduleCalendar').then((module) => ({
+  default: module.ScheduleCalendar,
+})));
 const ScheduleFormModal = lazy(() => import('../components/ScheduleFormModal').then((module) => ({
   default: module.ScheduleFormModal,
 })));
@@ -65,6 +67,45 @@ const ScheduleSnapshotModal = lazy(() => import('../components/ScheduleSnapshotM
 const ScheduleSuccessModal = lazy(() => import('../components/ScheduleSuccessModal').then((module) => ({
   default: module.ScheduleSuccessModal,
 })));
+
+const PREVIEW_WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+function ScheduleBoardPreview({ schedules, anchor, displayDays, settled }) {
+  const start = anchor instanceof Date && !Number.isNaN(anchor.getTime()) ? new Date(anchor) : new Date();
+  start.setHours(12, 0, 0, 0);
+  const dayCount = Math.min(7, Math.max(1, Number(displayDays) || 1));
+  const days = Array.from({ length: dayCount }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+
+  return (
+    <div className="schedule-preview" aria-label="班表">
+      {days.map((day) => {
+        const key = formatDateOnly(day);
+        const jobs = (schedules || [])
+          .filter((schedule) => formatDateOnly(schedule.work_date) === key)
+          .sort((left, right) => String(left.start_time || '').localeCompare(String(right.start_time || '')));
+
+        return (
+          <section className="schedule-preview__day" key={key}>
+            <h3 className="schedule-preview__date">{day.getMonth() + 1}/{day.getDate()} 週{PREVIEW_WEEKDAYS[day.getDay()]}</h3>
+            {jobs.map((job) => (
+              <article className="schedule-preview__job" key={job.id}>
+                <strong>{formatTimeValue(job.start_time)}–{formatTimeValue(job.end_time)}</strong>
+                <span>{job.user?.name || job.user?.account || ''}</span>
+                <span>{job.customer_name || ''}</span>
+                <span>{job.customer_address || ''}</span>
+              </article>
+            ))}
+            {settled && jobs.length === 0 && <p className="hint">這天沒有派工</p>}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 
 function getInitialDisplayDays(settings) {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
@@ -129,6 +170,7 @@ export default function AdminSchedulesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [employees, setEmployees] = useState(() => readScheduleCache().employees);
   const [allSchedules, setAllSchedules] = useState(() => readScheduleCache().schedules);
+  const [boardSettled, setBoardSettled] = useState(() => readScheduleCache().schedules.length > 0);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [form, setForm] = useState(emptyScheduleForm);
@@ -260,6 +302,7 @@ export default function AdminSchedulesPage() {
         write();
       }
 
+      setBoardSettled(true);
       return true;
     };
 
@@ -904,6 +947,14 @@ export default function AdminSchedulesPage() {
               {!isMobile && renderEmployeeStrip()}
 
               <div className="schedule-calendar-host">
+                <Suspense fallback={(
+                  <ScheduleBoardPreview
+                    schedules={schedules}
+                    anchor={currentDate}
+                    displayDays={displayDays}
+                    settled={boardSettled}
+                  />
+                )}>
                 <ScheduleCalendar
                   schedules={schedules}
                   leaves={calendarLeaves}
@@ -924,6 +975,7 @@ export default function AdminSchedulesPage() {
                   initialView={isMobile ? 'month' : null}
                   hidePrice={!canManageSchedulePricing(userRole)}
                 />
+                </Suspense>
               </div>
             </div>
           </div>
