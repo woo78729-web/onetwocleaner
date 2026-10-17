@@ -79,6 +79,19 @@ EOF
 RUN chown -R www-data:www-data /var/www
 COPY --link --chown=www-data:www-data --chmod=755 . /var/www
 
+# .dockerignore 會排除 cache/sessions/views，建置前必須先建立目錄
+RUN set -eux \
+	&& mkdir -p \
+		/var/www/storage/framework/cache/data \
+		/var/www/storage/framework/sessions \
+		/var/www/storage/framework/testing \
+		/var/www/storage/framework/views \
+		/var/www/storage/logs \
+		/var/www/storage/app/public/avatars \
+		/var/www/bootstrap/cache \
+	&& chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
+	&& chmod -R ug+rwx /var/www/storage /var/www/bootstrap/cache
+
 USER www-data
 RUN set -eux \
 	&& if [ -f composer.json ]; then composer install --optimize-autoloader --classmap-authoritative --no-dev; fi \
@@ -125,9 +138,9 @@ USER root
 
 RUN if [ -d /var/www/public ]; then sed -i 's|root /var/www;|root /var/www/public;|' /etc/nginx/sites-enabled/default; fi
 
-# Zeabur 若掛載空的 storage volume，會缺少 framework/cache，觸發
-# 「Please provide a valid cache path」並造成 API／健康檢查 500、前端白屏。
-ARG START_COMMAND="_startup() { nginx; php-fpm; }; mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/public/avatars bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache && php artisan config:clear && php artisan migrate --force && php artisan storage:link --force && _startup"
+# php-fpm 必須 -F 前景常駐，避免 Railway 容器啟動後立刻結束重啟
+# 啟動時 config:clear，改讀 runtime 的 APP_KEY／DB 環境變數
+ARG START_COMMAND="mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/public/avatars bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache && php artisan config:clear && php artisan migrate --force && php artisan storage:link --force && nginx && exec php-fpm -F"
 ENV START_COMMAND=${START_COMMAND}
 CMD eval ${START_COMMAND}
 
