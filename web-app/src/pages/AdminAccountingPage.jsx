@@ -156,7 +156,7 @@ export default function AdminAccountingPage() {
       <section className="card">
         <div className="card-header">
           <h2 className="card-title">月份查詢</h2>
-          <p className="hint">依回報資料計算各員工應收、應退、合夥分潤。1500 收 600、1400 收 550、1300 收 500、1000 收 400、900 收 350；客戶匯款給公司者依單價退員工差額。</p>
+          <p className="hint">依回報資料計算各員工應收、應退、合夥分潤。2500 收 1000、1500 收 600、1400 收 550、1300 收 500、1000 收 400、900 收 350；客戶匯款給公司者依單價退員工差額。</p>
         </div>
         <div className="filter-toolbar">
           <label className="field field-compact">
@@ -460,7 +460,7 @@ export default function AdminAccountingPage() {
             <div className="card-header" style={{ padding: '16px 16px 0' }}>
               <h2 className="card-title">員工績效細項</h2>
               <p className="hint">
-                依單價統計台數（1500／1400／1300／1000／900）。師傅實拿 = 客戶總額 − 公司抽成（1500→600、1400→550、1300→500、1000→400、900→350）− 發票稅8% − 賠償 + 車馬費加給。
+                依單價統計台數（2500／1500／1400／1300／1000／900）。師傅實拿 = 客戶總額 − 公司抽成（2500→1000、1500→600、1400→550、1300→500、1000→400、900→350）− 發票稅8% − 賠償 + 車馬費加給。
                 「應向師傅收」= 現場應繳 + 賠償入公司，方便萬兔對帳。
               </p>
             </div>

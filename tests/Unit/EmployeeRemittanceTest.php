@@ -118,6 +118,9 @@ class EmployeeRemittanceTest extends TestCase
 
     public function test_unit_prices_split_employee_keep_and_company_remittance(): void
     {
+        $this->assertSame(1000, EmployeeRemittance::remittancePerUnit(2500));
+        $this->assertSame(1500, EmployeeRemittance::employeeSharePerUnit(2500));
+
         $this->assertSame(600, EmployeeRemittance::remittancePerUnit(1500));
         $this->assertSame(900, EmployeeRemittance::employeeSharePerUnit(1500));
 

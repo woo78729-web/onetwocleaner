@@ -14,6 +14,7 @@ class EmployeeRemittance
     public static function remittanceMap(): array
     {
         return [
+            2500 => 1000,
             1500 => 600,
             1400 => 550,
             1300 => 500,
@@ -39,6 +40,7 @@ class EmployeeRemittance
     public static function emptyTierUnitCounts(): array
     {
         return [
+            2500 => 0,
             1500 => 0,
             1400 => 0,
             1300 => 0,
