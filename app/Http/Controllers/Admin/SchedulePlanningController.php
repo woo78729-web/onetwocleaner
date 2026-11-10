@@ -44,6 +44,7 @@ class SchedulePlanningController extends Controller
             ->get();
 
         $leaves = EmployeeLeave::query()
+            ->forActiveEmployees()
             ->with('user:id,name,account')
             ->when(! empty($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
             ->where(function ($query) use ($dateFrom, $dateTo) {
@@ -76,6 +77,7 @@ class SchedulePlanningController extends Controller
         $dateTo = $validated['date_to'] ?? now()->addMonths(2)->endOfMonth()->toDateString();
 
         $leaves = EmployeeLeave::query()
+            ->forActiveEmployees()
             ->with('user:id,name,account')
             ->when(! empty($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
             ->where(function ($query) use ($dateFrom, $dateTo) {

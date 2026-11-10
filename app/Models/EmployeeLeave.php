@@ -36,4 +36,17 @@ class EmployeeLeave extends Model
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
+
+    /**
+     * 僅啟用中員工的休假（停用／離職者不顯示於排班行事曆）
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\EmployeeLeave>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\EmployeeLeave>
+     */
+    public function scopeForActiveEmployees($query)
+    {
+        return $query->whereHas('user', function ($builder) {
+            $builder->where('is_active', true);
+        });
+    }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\DailyReport;
 use App\Models\DailySchedule;
+use App\Models\EmployeeLeave;
 use App\Models\User;
 use App\Support\CompanyRemittanceSupport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -319,12 +320,20 @@ class AdminEnhancementApiTest extends TestCase
         $this->employee->createToken('test');
         $this->assertDatabaseCount('personal_access_tokens', 1);
 
+        EmployeeLeave::query()->create([
+            'user_id' => $this->employee->id,
+            'leave_type' => EmployeeLeave::TYPE_WEEKLY,
+            'weekday' => 3,
+        ]);
+        $this->assertDatabaseCount('employee_leaves', 1);
+
         $this->patchJson('/api/admin/users/'.$this->employee->id, [
             'is_active' => false,
         ])->assertOk()
             ->assertJsonPath('data.is_active', false);
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseCount('employee_leaves', 0);
     }
 
     public function test_admin_can_update_schedule_with_existing_report_and_resync_financials(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmployeeLeave;
 use App\Models\User;
 use App\Support\ClothingSize;
 use App\Support\RolePermission;
@@ -159,6 +160,7 @@ class UserController extends Controller
 
         if (array_key_exists('is_active', $validated) && $validated['is_active'] === false) {
             $user->tokens()->delete();
+            EmployeeLeave::query()->where('user_id', $user->id)->delete();
         }
 
         return $this->success(
@@ -183,6 +185,7 @@ class UserController extends Controller
         }
 
         $user->tokens()->delete();
+        EmployeeLeave::query()->where('user_id', $user->id)->delete();
         $user->delete();
 
         return $this->success(null, '帳號已刪除，歷史班表資料仍保留供查詢');

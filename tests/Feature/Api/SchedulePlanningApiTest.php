@@ -292,6 +292,44 @@ class SchedulePlanningApiTest extends TestCase
             ->assertJsonCount(1, 'data.leaves');
     }
 
+    public function test_admin_leaves_hide_inactive_employees(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $inactive = User::query()->create([
+            'account' => 'exemp1',
+            'password' => Hash::make('password123'),
+            'name' => '已離職員工',
+            'role' => 'employee',
+            'is_active' => false,
+            'rules_accepted_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        EmployeeLeave::query()->create([
+            'user_id' => $this->employee->id,
+            'leave_type' => EmployeeLeave::TYPE_WEEKLY,
+            'weekday' => 1,
+        ]);
+
+        EmployeeLeave::query()->create([
+            'user_id' => $inactive->id,
+            'leave_type' => EmployeeLeave::TYPE_WEEKLY,
+            'weekday' => 2,
+        ]);
+
+        EmployeeLeave::query()->create([
+            'user_id' => $inactive->id,
+            'leave_type' => EmployeeLeave::TYPE_DATE,
+            'leave_date' => now()->addDay()->toDateString(),
+        ]);
+
+        $this->getJson('/api/admin/planning/leaves')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.leaves')
+            ->assertJsonPath('data.leaves.0.user_id', $this->employee->id);
+    }
+
     public function test_leave_registration_window_helper(): void
     {
         Carbon::setTestNow(Carbon::create(2026, 6, 20, 9, 0, 0));
