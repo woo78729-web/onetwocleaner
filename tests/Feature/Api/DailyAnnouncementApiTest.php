@@ -144,4 +144,35 @@ class DailyAnnouncementApiTest extends TestCase
             'created_by' => $this->admin->id,
         ]);
     }
+
+    public function test_deleting_schedule_creates_cancel_announcement(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 15, 16, 20, 0, 'Asia/Taipei'));
+        Sanctum::actingAs($this->admin);
+        $this->admin->forceFill(['name' => '邱泰翔'])->save();
+        $this->employee->forceFill(['name' => '王加和'])->save();
+
+        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'created_by' => $this->admin->id,
+            'work_date' => '2026-11-19',
+            'customer_source' => CustomerSource::FB_AD,
+            'fb_display_name' => 'leo',
+            'service_area' => 'zuoying',
+            'ac_units' => 2,
+        ]));
+
+        $this->deleteJson('/api/admin/schedules/'.$schedule->id)->assertOk();
+        $this->assertDatabaseMissing('daily_schedules', ['id' => $schedule->id]);
+
+        $response = $this->getJson('/api/admin/daily-announcement?year_month=2026-11')
+            ->assertOk();
+
+        $cancel = collect($response->json('data.activity'))->firstWhere('type', 'cancel');
+        $this->assertNotNull($cancel);
+        $this->assertSame('16:20 邱泰翔 取消 FB廣告 王加和 左營區 leo 2台', $cancel['detail_line']);
+        $this->assertStringContainsString('原班表 #'.$schedule->id, $cancel['summary']);
+
+        Carbon::setTestNow();
+    }
 }

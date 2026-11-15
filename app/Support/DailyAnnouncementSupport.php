@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\DailyReport;
 use App\Models\DailySchedule;
 use App\Models\MaintenanceRecord;
+use App\Models\ScheduleAnnouncementEvent;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -301,8 +302,52 @@ class DailyAnnouncementSupport
                 ];
             });
 
+        $cancelEvents = ScheduleAnnouncementEvent::query()
+            ->with('actor:id,name')
+            ->where('event_type', ScheduleAnnouncementEvent::TYPE_CANCEL)
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->map(function (ScheduleAnnouncementEvent $event) use ($timezone, $includeDate) {
+                $at = Carbon::parse($event->created_at)->timezone($timezone);
+                $operator = $event->actor?->name ?: '未知操作者';
+                $technician = $event->technician_name ?: '未指定師傅';
+                $area = self::areaText($event->service_area);
+                $units = (int) $event->ac_units;
+                $sourceLabel = CustomerSource::label((string) ($event->customer_source ?: CustomerSource::PHONE));
+                $contactName = $event->contact_name ?: '未填名稱';
+                $workDate = $event->work_date?->format('Y-m-d') ?? '未填日期';
+                $time = self::formatActivityTime($at, $includeDate);
+                $detailLine = sprintf(
+                    '%s %s 取消 %s %s %s %s %d台',
+                    $time,
+                    $operator,
+                    $sourceLabel,
+                    $technician,
+                    $area,
+                    $contactName,
+                    $units
+                );
+
+                return [
+                    'type' => 'cancel',
+                    'id' => ($includeDate ? 'month-cancel-' : 'cancel-').$event->id,
+                    'at' => $at->format('Y-m-d H:i'),
+                    'time' => $time,
+                    'sort_at' => $at->timestamp,
+                    'actor' => $operator,
+                    'action' => '取消',
+                    'title' => $detailLine,
+                    'summary' => sprintf('施工 %s · 原班表 #%s', $workDate, $event->schedule_id ?? '-'),
+                    'detail_line' => $detailLine,
+                ];
+            });
+
         /** @var Collection<int, array<string, mixed>> $merged */
-        $merged = $scheduleEvents->concat($reportEvents)
+        $merged = $scheduleEvents
+            ->concat($reportEvents)
+            ->concat($cancelEvents)
             ->sortByDesc('sort_at')
             ->values()
             ->map(function (array $item) {

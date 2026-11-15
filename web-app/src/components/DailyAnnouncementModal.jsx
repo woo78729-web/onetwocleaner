@@ -140,12 +140,12 @@ export function DailyAnnouncementModal({
             </section>
 
             <section className="daily-announcement__section daily-announcement__section--activity">
-              <div className="daily-announcement__activity-grid">
+              <div className="daily-announcement__activity-stack">
                 <div className="daily-announcement__activity-pane">
                   <h3 className="daily-announcement__section-title">當日歷程記錄</h3>
                   <ActivityList
                     items={activity}
-                    emptyText="今天尚無排單或回報紀錄"
+                    emptyText="今天尚無排單、回報或取消紀錄"
                   />
                 </div>
                 <div className="daily-announcement__activity-pane">
@@ -165,7 +165,7 @@ export function DailyAnnouncementModal({
                   ) : (
                     <ActivityList
                       items={monthlyActivity}
-                      emptyText="這個月尚無排單或回報紀錄"
+                      emptyText="這個月尚無排單、回報或取消紀錄"
                     />
                   )}
                 </div>
