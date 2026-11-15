@@ -67,6 +67,14 @@ export function getNavItems(user) {
   });
 
   pushItem(items, user, {
+    permission: 'reports.view',
+    to: '/admin/ad-revenue-report',
+    label: '廣告收益回報',
+    shortLabel: '廣告',
+    tabOrder: prefersSchedulesHome ? 2.2 : 1.2,
+  });
+
+  pushItem(items, user, {
     permission: 'accounting.manage',
     to: '/admin/accounting',
     label: '記帳表單',

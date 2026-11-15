@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountingController as AdminAccountingController;
+use App\Http\Controllers\Admin\AdRevenueReportController as AdminAdRevenueReportController;
 use App\Http\Controllers\Admin\CleaningProjectController as AdminCleaningProjectController;
 use App\Http\Controllers\Admin\LegacyLedgerController as AdminLegacyLedgerController;
 use App\Http\Controllers\Admin\CustomerLookupController;
@@ -114,6 +115,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
 Route::middleware(['auth:sanctum', 'role:admin|finance|customer_service'])->prefix('admin')->group(function () {
     Route::get('/reports/export', [AdminReportController::class, 'export']);
     Route::get('/reports', [AdminReportController::class, 'index']);
+    Route::get('/ad-revenue-report', [AdminAdRevenueReportController::class, 'show']);
 });
 
 Route::middleware(['auth:sanctum', 'role:employee', 'employee.onboarded'])->prefix('employee')->group(function () {

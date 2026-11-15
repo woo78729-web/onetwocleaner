@@ -494,6 +494,10 @@ class AcCleaningApi {
     return this.request('GET', '/admin/reports', { params: filters });
   }
 
+  getAdRevenueReport(params = {}) {
+    return this.request('GET', '/admin/ad-revenue-report', { params });
+  }
+
   getRemittanceTracking(yearMonth) {
     return this.request('GET', '/admin/remittance-tracking', { params: { year_month: yearMonth } });
   }

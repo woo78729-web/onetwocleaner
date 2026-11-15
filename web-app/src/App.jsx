@@ -15,6 +15,7 @@ import AdminSchedulesPage from './pages/AdminSchedulesPage';
 preloadAdminHome();
 
 const AdminReportsPage = lazy(lazyRetry(() => import('./pages/AdminReportsPage')));
+const AdminAdRevenueReportPage = lazy(lazyRetry(() => import('./pages/AdminAdRevenueReportPage')));
 const AdminAccountingPage = lazy(lazyRetry(() => import('./pages/AdminAccountingPage')));
 const AdminPerformancePage = lazy(lazyRetry(() => import('./pages/AdminPerformancePage')));
 const AdminStaffPage = lazy(lazyRetry(() => import('./pages/AdminStaffPage')));
@@ -62,6 +63,7 @@ export default function App() {
                   <Route element={<ProtectedRoute permission="reports.view" />}>
                     <Route path="/admin" element={<AdminReportsPage />} />
                     <Route path="/finance" element={<AdminReportsPage />} />
+                    <Route path="/admin/ad-revenue-report" element={<AdminAdRevenueReportPage />} />
                   </Route>
 
                   <Route element={<ProtectedRoute permission="accounting.manage" />}>
