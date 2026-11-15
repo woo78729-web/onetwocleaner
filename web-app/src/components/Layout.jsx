@@ -168,6 +168,10 @@ function LayoutFrame({ title, children }) {
   const [announcementLoading, setAnnouncementLoading] = useState(false);
   const [announcementError, setAnnouncementError] = useState('');
   const [announcementData, setAnnouncementData] = useState(null);
+  const [announcementMonth, setAnnouncementMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   const navStructure = user ? getNavStructure(user) : [];
   const mobileTabItems = user ? getMobileTabItems(user) : [];
@@ -226,7 +230,7 @@ function LayoutFrame({ title, children }) {
     }
   }
 
-  const loadAnnouncement = useCallback(async () => {
+  const loadAnnouncement = useCallback(async (month = announcementMonth) => {
     if (!canViewAnnouncement) {
       return;
     }
@@ -235,14 +239,19 @@ function LayoutFrame({ title, children }) {
     setAnnouncementError('');
 
     try {
-      const result = await api.getDailyAnnouncement();
+      const result = await api.getDailyAnnouncement({
+        year_month: month,
+      });
       setAnnouncementData(result.data || null);
+      if (result.data?.monthly?.year_month) {
+        setAnnouncementMonth(result.data.monthly.year_month);
+      }
     } catch (err) {
       setAnnouncementError(err?.message || '公告載入失敗');
     } finally {
       setAnnouncementLoading(false);
     }
-  }, [canViewAnnouncement]);
+  }, [canViewAnnouncement, announcementMonth]);
 
   useEffect(() => {
     if (!canViewAnnouncement) {
@@ -252,7 +261,7 @@ function LayoutFrame({ title, children }) {
 
     let cancelled = false;
 
-    api.getDailyAnnouncement()
+    api.getDailyAnnouncement({ year_month: announcementMonth })
       .then((result) => {
         if (!cancelled) {
           setAnnouncementData(result.data || null);
@@ -267,11 +276,15 @@ function LayoutFrame({ title, children }) {
     return () => {
       cancelled = true;
     };
-  }, [canViewAnnouncement, location.pathname]);
+  }, [canViewAnnouncement, location.pathname, announcementMonth]);
 
   async function openAnnouncement() {
     setAnnouncementOpen(true);
-    await loadAnnouncement();
+    await loadAnnouncement(announcementMonth);
+  }
+
+  function handleAnnouncementMonthChange(nextMonth) {
+    setAnnouncementMonth(nextMonth);
   }
 
   useEffect(() => {
@@ -369,8 +382,10 @@ function LayoutFrame({ title, children }) {
           loading={announcementLoading}
           error={announcementError}
           data={announcementData}
+          yearMonth={announcementMonth}
+          onYearMonthChange={handleAnnouncementMonthChange}
           onClose={() => setAnnouncementOpen(false)}
-          onRefresh={loadAnnouncement}
+          onRefresh={() => loadAnnouncement(announcementMonth)}
         />
 
         {user && (

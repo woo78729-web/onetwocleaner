@@ -20,10 +20,14 @@ class DailyAnnouncementSupport
      *     pending_maintenance_count: int,
      *     total_count: int
      *   },
-     *   activity: list<array<string, mixed>>
+     *   activity: list<array<string, mixed>>,
+     *   monthly: array{
+     *     year_month: string,
+     *     activity: list<array<string, mixed>>
+     *   }
      * }
      */
-    public static function build(?string $date = null): array
+    public static function build(?string $date = null, ?string $yearMonth = null): array
     {
         $day = $date
             ? Carbon::parse($date, config('app.timezone'))->startOfDay()
@@ -31,10 +35,20 @@ class DailyAnnouncementSupport
         $dayEnd = $day->copy()->endOfDay();
         $dateString = $day->toDateString();
 
+        if ($yearMonth && preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+            $monthAnchor = Carbon::createFromFormat('Y-m-d', $yearMonth.'-01', config('app.timezone'));
+        } else {
+            $monthAnchor = $day->copy();
+        }
+
+        $monthStart = $monthAnchor->copy()->startOfMonth()->startOfDay();
+        $monthEnd = $monthAnchor->copy()->endOfMonth()->endOfDay();
+
         $pendingMail = self::pendingMailItems();
         $pendingMaintenance = self::pendingMaintenanceItems();
 
-        $activity = self::buildActivity($day, $dayEnd);
+        $activity = self::buildActivity($day, $dayEnd, includeDate: false, limit: 100);
+        $monthlyActivity = self::buildActivity($monthStart, $monthEnd, includeDate: true, limit: 400);
 
         return [
             'date' => $dateString,
@@ -46,6 +60,10 @@ class DailyAnnouncementSupport
                 'total_count' => count($pendingMail) + count($pendingMaintenance),
             ],
             'activity' => $activity,
+            'monthly' => [
+                'year_month' => $monthStart->format('Y-m'),
+                'activity' => $monthlyActivity,
+            ],
         ];
     }
 
@@ -190,17 +208,21 @@ class DailyAnnouncementSupport
     /**
      * @return list<array<string, mixed>>
      */
-    private static function buildActivity(Carbon $dayStart, Carbon $dayEnd): array
-    {
+    private static function buildActivity(
+        Carbon $rangeStart,
+        Carbon $rangeEnd,
+        bool $includeDate = false,
+        int $limit = 100,
+    ): array {
         $timezone = config('app.timezone');
 
         $scheduleEvents = DailySchedule::query()
             ->with(['user:id,name', 'creator:id,name'])
-            ->whereBetween('created_at', [$dayStart, $dayEnd])
-            ->orderBy('created_at')
-            ->limit(100)
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->orderByDesc('created_at')
+            ->limit($limit)
             ->get()
-            ->map(function (DailySchedule $schedule) use ($timezone) {
+            ->map(function (DailySchedule $schedule) use ($timezone, $includeDate) {
                 $at = Carbon::parse($schedule->created_at)->timezone($timezone);
                 $operator = $schedule->creator?->name ?: '未知操作者';
                 $technician = $schedule->user?->name ?: '未指定師傅';
@@ -209,7 +231,7 @@ class DailyAnnouncementSupport
                 $workDate = $schedule->work_date?->format('Y-m-d') ?? '未填日期';
                 $sourceLabel = CustomerSource::label((string) ($schedule->customer_source ?: CustomerSource::PHONE));
                 $contactName = self::contactDisplayName($schedule);
-                $time = $at->format('H:i');
+                $time = self::formatActivityTime($at, $includeDate);
                 $detailLine = sprintf(
                     '%s %s 派單 %s %s %s %s %d台',
                     $time,
@@ -223,7 +245,7 @@ class DailyAnnouncementSupport
 
                 return [
                     'type' => 'dispatch',
-                    'id' => 'dispatch-'.$schedule->id,
+                    'id' => ($includeDate ? 'month-dispatch-' : 'dispatch-').$schedule->id,
                     'at' => $at->format('Y-m-d H:i'),
                     'time' => $time,
                     'sort_at' => $at->timestamp,
@@ -240,11 +262,11 @@ class DailyAnnouncementSupport
                 'dailySchedule:id,customer_name,fb_display_name,line_display_name,customer_source,work_date,user_id,service_area,ac_units',
                 'dailySchedule.user:id,name',
             ])
-            ->whereBetween('created_at', [$dayStart, $dayEnd])
-            ->orderBy('created_at')
-            ->limit(100)
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->orderByDesc('created_at')
+            ->limit($limit)
             ->get()
-            ->map(function (DailyReport $report) use ($timezone) {
+            ->map(function (DailyReport $report) use ($timezone, $includeDate) {
                 $schedule = $report->dailySchedule;
                 $at = Carbon::parse($report->created_at)->timezone($timezone);
                 $technician = $schedule?->user?->name ?: '未指定師傅';
@@ -253,7 +275,7 @@ class DailyAnnouncementSupport
                 $sourceLabel = CustomerSource::label((string) ($schedule?->customer_source ?: CustomerSource::PHONE));
                 $contactName = $schedule ? self::contactDisplayName($schedule) : '未填名稱';
                 $workDate = $schedule?->work_date?->format('Y-m-d') ?? '未填日期';
-                $time = $at->format('H:i');
+                $time = self::formatActivityTime($at, $includeDate);
                 $detailLine = sprintf(
                     '%s %s 回報 %s %s %s %s %d台',
                     $time,
@@ -267,7 +289,7 @@ class DailyAnnouncementSupport
 
                 return [
                     'type' => 'report',
-                    'id' => 'report-activity-'.$report->id,
+                    'id' => ($includeDate ? 'month-report-' : 'report-activity-').$report->id,
                     'at' => $at->format('Y-m-d H:i'),
                     'time' => $time,
                     'sort_at' => $at->timestamp,
@@ -290,6 +312,15 @@ class DailyAnnouncementSupport
             });
 
         return $merged->all();
+    }
+
+    private static function formatActivityTime(Carbon $at, bool $includeDate): string
+    {
+        if ($includeDate) {
+            return $at->format('m/d H:i');
+        }
+
+        return $at->format('H:i');
     }
 
     private static function areaText(?string $serviceArea): string

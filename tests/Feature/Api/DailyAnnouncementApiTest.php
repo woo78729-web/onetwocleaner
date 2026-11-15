@@ -87,12 +87,13 @@ class DailyAnnouncementApiTest extends TestCase
             'status' => MaintenanceRecord::STATUS_OPEN,
         ]);
 
-        $response = $this->getJson('/api/admin/daily-announcement')
+        $response = $this->getJson('/api/admin/daily-announcement?year_month=2026-11')
             ->assertOk()
             ->assertJsonPath('data.date', '2026-11-15')
             ->assertJsonPath('data.todos.pending_mail_count', 1)
             ->assertJsonPath('data.todos.pending_maintenance_count', 1)
-            ->assertJsonPath('data.todos.total_count', 2);
+            ->assertJsonPath('data.todos.total_count', 2)
+            ->assertJsonPath('data.monthly.year_month', '2026-11');
 
         $activity = collect($response->json('data.activity'));
         $this->assertContains('dispatch', $activity->pluck('type')->all());
@@ -105,6 +106,10 @@ class DailyAnnouncementApiTest extends TestCase
         $reportActivity = $activity->firstWhere('type', 'report');
         $this->assertSame('13:40', $reportActivity['time']);
         $this->assertStringStartsWith('13:40 王加和 回報', $reportActivity['detail_line']);
+
+        $monthly = collect($response->json('data.monthly.activity'));
+        $monthlyDispatch = $monthly->firstWhere('type', 'dispatch');
+        $this->assertSame('11/15 09:15 邱泰翔 派單 FB廣告 王加和 左營區 leo 3台', $monthlyDispatch['detail_line']);
 
         Carbon::setTestNow();
     }

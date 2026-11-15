@@ -1,4 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+
+function currentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
 function TodoList({ title, items, emptyText, linkTo, linkLabel }) {
   return (
@@ -26,14 +32,45 @@ function TodoList({ title, items, emptyText, linkTo, linkLabel }) {
   );
 }
 
+function ActivityList({ items, emptyText }) {
+  if (!items.length) {
+    return <p className="hint">{emptyText}</p>;
+  }
+
+  return (
+    <ul className="daily-announcement__timeline">
+      {items.map((item) => (
+        <li key={item.id} className={`daily-announcement__timeline-item is-${item.type}`}>
+          <div>
+            <p className="daily-announcement__item-title">
+              {item.detail_line || item.title}
+            </p>
+            {item.summary && <p className="hint">{item.summary}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function DailyAnnouncementModal({
   open,
   loading,
   error,
   data,
+  yearMonth,
+  onYearMonthChange,
   onClose,
   onRefresh,
 }) {
+  const [localMonth, setLocalMonth] = useState(yearMonth || currentYearMonth());
+
+  useEffect(() => {
+    if (yearMonth) {
+      setLocalMonth(yearMonth);
+    }
+  }, [yearMonth]);
+
   if (!open) {
     return null;
   }
@@ -43,6 +80,13 @@ export function DailyAnnouncementModal({
     pending_maintenance: [],
   };
   const activity = data?.activity || [];
+  const monthlyActivity = data?.monthly?.activity || [];
+
+  function handleMonthChange(event) {
+    const next = event.target.value;
+    setLocalMonth(next);
+    onYearMonthChange?.(next);
+  }
 
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
@@ -96,23 +140,36 @@ export function DailyAnnouncementModal({
             </section>
 
             <section className="daily-announcement__section daily-announcement__section--activity">
-              <h3 className="daily-announcement__section-title">當日歷程記錄</h3>
-              {activity.length === 0 ? (
-                <p className="hint">今天尚無排單或回報紀錄</p>
-              ) : (
-                <ul className="daily-announcement__timeline">
-                  {activity.map((item) => (
-                    <li key={item.id} className={`daily-announcement__timeline-item is-${item.type}`}>
-                      <div>
-                        <p className="daily-announcement__item-title">
-                          {item.detail_line || item.title}
-                        </p>
-                        {item.summary && <p className="hint">{item.summary}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="daily-announcement__activity-grid">
+                <div className="daily-announcement__activity-pane">
+                  <h3 className="daily-announcement__section-title">當日歷程記錄</h3>
+                  <ActivityList
+                    items={activity}
+                    emptyText="今天尚無排單或回報紀錄"
+                  />
+                </div>
+                <div className="daily-announcement__activity-pane">
+                  <div className="daily-announcement__month-head">
+                    <h3 className="daily-announcement__section-title">當月歷程記錄</h3>
+                    <label className="field daily-announcement__month-field">
+                      <span className="field-label">月份</span>
+                      <input
+                        type="month"
+                        value={localMonth}
+                        onChange={handleMonthChange}
+                      />
+                    </label>
+                  </div>
+                  {loading ? (
+                    <p className="hint">載入中…</p>
+                  ) : (
+                    <ActivityList
+                      items={monthlyActivity}
+                      emptyText="這個月尚無排單或回報紀錄"
+                    />
+                  )}
+                </div>
+              </div>
             </section>
           </div>
         )}

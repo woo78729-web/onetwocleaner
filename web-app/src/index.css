@@ -295,10 +295,51 @@ a {
 }
 
 .daily-announcement-modal {
-  width: min(720px, calc(100vw - 24px));
+  width: min(1080px, calc(100vw - 24px));
   max-height: min(86vh, 900px);
   display: flex;
   flex-direction: column;
+}
+
+.daily-announcement__activity-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.daily-announcement__activity-pane {
+  min-width: 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.daily-announcement__month-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.daily-announcement__month-head .daily-announcement__section-title {
+  margin-bottom: 0;
+}
+
+.daily-announcement__month-field {
+  margin: 0;
+  min-width: 140px;
+}
+
+.daily-announcement__activity-pane .daily-announcement__timeline {
+  max-height: min(46vh, 420px);
+}
+
+@media (max-width: 860px) {
+  .daily-announcement__activity-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .daily-announcement__body {
