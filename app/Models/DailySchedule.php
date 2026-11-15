@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Auth;
 
 #[Fillable([
     'user_id',
@@ -48,6 +49,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 ])]
 class DailySchedule extends Model
 {
+    protected static function booted(): void
+    {
+        static::creating(function (DailySchedule $schedule): void {
+            if (! $schedule->created_by && Auth::id()) {
+                $schedule->created_by = Auth::id();
+            }
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();

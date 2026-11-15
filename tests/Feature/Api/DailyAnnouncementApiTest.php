@@ -6,6 +6,7 @@ use App\Models\DailyReport;
 use App\Models\DailySchedule;
 use App\Models\MaintenanceRecord;
 use App\Models\User;
+use App\Support\CustomerSource;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -119,5 +120,28 @@ class DailyAnnouncementApiTest extends TestCase
         Sanctum::actingAs($this->employee);
 
         $this->getJson('/api/admin/daily-announcement')->assertForbidden();
+    }
+
+    public function test_new_schedule_stores_logged_in_creator(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $response = $this->postJson('/api/admin/schedules', $this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => now()->addDays(2)->toDateString(),
+            'customer_source' => CustomerSource::FB_AD,
+            'fb_display_name' => 'leo',
+            'service_area' => 'zuoying',
+            'ac_units' => 2,
+            'pricing_lines' => [
+                ['ac_units' => 2, 'unit_price' => 1500],
+            ],
+            'task_details' => '2台3000',
+        ]))->assertCreated();
+
+        $this->assertDatabaseHas('daily_schedules', [
+            'id' => $response->json('data.id'),
+            'created_by' => $this->admin->id,
+        ]);
     }
 }

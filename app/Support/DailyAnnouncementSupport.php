@@ -224,7 +224,7 @@ class DailyAnnouncementSupport
             ->get()
             ->map(function (DailySchedule $schedule) use ($timezone, $includeDate) {
                 $at = Carbon::parse($schedule->created_at)->timezone($timezone);
-                $operator = $schedule->creator?->name ?: '未知操作者';
+                $operator = $schedule->creator?->name ?: '舊單未記錄';
                 $technician = $schedule->user?->name ?: '未指定師傅';
                 $area = self::areaText($schedule->service_area);
                 $units = (int) $schedule->ac_units;
