@@ -8,22 +8,9 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString('zh-TW');
 }
 
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function currentYearMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function startOfWeekSunday(date = new Date()) {
-  const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  next.setDate(next.getDate() - next.getDay());
-  return next;
 }
 
 function downloadCsv(filename, rows) {
@@ -44,9 +31,7 @@ function downloadCsv(filename, rows) {
 }
 
 export default function AdminAdRevenueReportPage() {
-  const [anchorWeek, setAnchorWeek] = useState(() => toDateInputValue(startOfWeekSunday()));
   const [yearMonth, setYearMonth] = useState(() => currentYearMonth());
-  const [weeksCount, setWeeksCount] = useState(8);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,9 +42,7 @@ export default function AdminAdRevenueReportPage() {
 
     try {
       const result = await api.getAdRevenueReport({
-        week_start: anchorWeek,
         year_month: yearMonth,
-        weeks: weeksCount,
       });
       setReport(result.data);
       if (result.data?.monthly?.year_month) {
@@ -71,7 +54,7 @@ export default function AdminAdRevenueReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [anchorWeek, yearMonth, weeksCount]);
+  }, [yearMonth]);
 
   useEffect(() => {
     loadReport();
@@ -86,10 +69,6 @@ export default function AdminAdRevenueReportPage() {
     vendor_fee_amount: 0,
   };
   const feePercent = Math.round(Number(monthly.vendor_fee_rate || 0.05) * 100);
-  const totals = weeks.reduce((summary, week) => ({
-    orders_received: summary.orders_received + Number(week.orders_received || 0),
-    deal_amount: summary.deal_amount + Number(week.deal_amount || 0),
-  }), { orders_received: 0, deal_amount: 0 });
 
   const handleExport = () => {
     if (!weeks.length && !monthly.deal_amount) {
@@ -103,7 +82,6 @@ export default function AdminAdRevenueReportPage() {
         week.orders_received,
         week.deal_amount,
       ]),
-      ['週次合計', totals.orders_received, totals.deal_amount],
       [],
       ['月結月份', '月收單量', '月成交總額', `廠商廣告費(${feePercent}%)`],
       [
@@ -124,19 +102,16 @@ export default function AdminAdRevenueReportPage() {
           <div>
             <h2 className="card-title">廣告收益回報</h2>
             <p className="hint">
-              只統計派單來源「FB廣告」，依打單時間（不是施工日）切週／月；月成交總額 × {feePercent}%＝廠商廣告費。
+              只顯示所選月份的 FB廣告週次；依打單時間統計，月成交總額 × {feePercent}%＝廠商廣告費。
             </p>
           </div>
           <div className="toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => {
-                setAnchorWeek(toDateInputValue(startOfWeekSunday()));
-                setYearMonth(currentYearMonth());
-              }}
+              onClick={() => setYearMonth(currentYearMonth())}
             >
-              回到本週／本月
+              回到本月
             </button>
             <button type="button" className="btn btn-secondary" onClick={handleExport} disabled={loading}>
               匯出 CSV
@@ -154,28 +129,12 @@ export default function AdminAdRevenueReportPage() {
           }}
         >
           <label className="field">
-            <span className="field-label">統計截止週（任選該週一天）</span>
-            <input
-              type="date"
-              value={anchorWeek}
-              onChange={(event) => setAnchorWeek(event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">月結月份</span>
+            <span className="field-label">月份</span>
             <input
               type="month"
               value={yearMonth}
               onChange={(event) => setYearMonth(event.target.value)}
             />
-          </label>
-          <label className="field">
-            <span className="field-label">顯示週數</span>
-            <select value={weeksCount} onChange={(event) => setWeeksCount(Number(event.target.value))}>
-              <option value={4}>近 4 週</option>
-              <option value={8}>近 8 週</option>
-              <option value={12}>近 12 週</option>
-            </select>
           </label>
         </div>
       </section>
@@ -208,7 +167,7 @@ export default function AdminAdRevenueReportPage() {
       <section className="card table-card">
         <div className="card-header" style={{ padding: '16px 16px 0' }}>
           <h2 className="card-title">成效指標追蹤</h2>
-          <p className="hint">依打單時間歸週；只計來源「FB廣告」的已收單與成交總額。</p>
+          <p className="hint">只列當月週次（週日～週六）。</p>
         </div>
         <div className="table-wrap">
           {loading ? (
@@ -238,9 +197,9 @@ export default function AdminAdRevenueReportPage() {
               {weeks.length > 0 && (
                 <tfoot>
                   <tr>
-                    <td>合計</td>
-                    <td className="num">{totals.orders_received}</td>
-                    <td className="num">{formatMoney(totals.deal_amount)}</td>
+                    <td>月合計</td>
+                    <td className="num">{monthly.orders_received}</td>
+                    <td className="num">{formatMoney(monthly.deal_amount)}</td>
                   </tr>
                 </tfoot>
               )}

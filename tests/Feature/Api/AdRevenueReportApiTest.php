@@ -44,36 +44,44 @@ class AdRevenueReportApiTest extends TestCase
         ]);
     }
 
-    public function test_ad_revenue_report_only_counts_fb_ad_by_created_at(): void
+    public function test_ad_revenue_report_only_shows_selected_month_weeks(): void
     {
         Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
         Sanctum::actingAs($this->admin);
 
-        $inWeek = DailySchedule::query()->create($this->scheduleAttributes([
+        $weekA = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-20',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 3000,
         ]));
-        $inWeek->forceFill(['created_at' => '2026-11-10 09:30:00'])->save();
+        $weekA->forceFill(['created_at' => '2026-11-10 09:30:00'])->save();
 
-        $sameWeek = DailySchedule::query()->create($this->scheduleAttributes([
+        $weekB = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-21',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 1500,
         ]));
-        $sameWeek->forceFill(['created_at' => '2026-11-12 14:00:00'])->save();
+        $weekB->forceFill(['created_at' => '2026-11-12 14:00:00'])->save();
 
-        $outWeek = DailySchedule::query()->create($this->scheduleAttributes([
+        $earlierInMonth = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
-            'work_date' => '2026-11-12',
+            'work_date' => '2026-11-05',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 9000,
         ]));
-        $outWeek->forceFill(['created_at' => '2026-11-03 09:30:00'])->save();
+        $earlierInMonth->forceFill(['created_at' => '2026-11-03 09:30:00'])->save();
 
-        // 一般 FB／電聯不應計入廣告收益
+        // 上月不應出現在 11 月週次
+        DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-10-30',
+            'customer_source' => CustomerSource::FB_AD,
+            'cleaning_price' => 99999,
+        ]))->forceFill(['created_at' => '2026-10-28 09:00:00'])->save();
+
+        // 一般 FB 不計入
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-12',
@@ -81,70 +89,22 @@ class AdRevenueReportApiTest extends TestCase
             'cleaning_price' => 5000,
         ]))->forceFill(['created_at' => '2026-11-10 10:00:00'])->save();
 
-        DailySchedule::query()->create($this->scheduleAttributes([
-            'user_id' => $this->employee->id,
-            'work_date' => '2026-11-12',
-            'customer_source' => CustomerSource::PHONE,
-            'cleaning_price' => 2000,
-        ]))->forceFill(['created_at' => '2026-11-10 10:00:00'])->save();
-
-        $response = $this->getJson('/api/admin/ad-revenue-report?week_start=2026-11-10&weeks=2')
+        $response = $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11')
             ->assertOk()
             ->assertJsonPath('data.basis', 'scheduled_at')
-            ->assertJsonCount(2, 'data.weeks');
+            ->assertJsonPath('data.monthly.year_month', '2026-11')
+            ->assertJsonPath('data.monthly.orders_received', 3)
+            ->assertJsonPath('data.monthly.deal_amount', 13500)
+            ->assertJsonPath('data.monthly.vendor_fee_amount', 675);
 
         $weeks = collect($response->json('data.weeks'));
-        $current = $weeks->firstWhere('week_start', '2026-11-08');
-        $previous = $weeks->firstWhere('week_start', '2026-11-01');
+        $this->assertTrue($weeks->every(fn (array $week) => str_starts_with($week['week_start'], '2026-11')));
+        $this->assertSame(['1101-1107', '1108-1114', '1115-1121', '1122-1128', '1129-1205'], $weeks->pluck('label')->all());
 
-        $this->assertNotNull($current);
-        $this->assertSame('1108-1114', $current['label']);
-        $this->assertSame(2, $current['orders_received']);
-        $this->assertSame(4500, $current['deal_amount']);
-
-        $this->assertNotNull($previous);
-        $this->assertSame(1, $previous['orders_received']);
-        $this->assertSame(9000, $previous['deal_amount']);
-
-        Carbon::setTestNow();
-    }
-
-    public function test_ad_revenue_report_monthly_vendor_fee_is_five_percent(): void
-    {
-        Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
-        Sanctum::actingAs($this->admin);
-
-        $novA = DailySchedule::query()->create($this->scheduleAttributes([
-            'user_id' => $this->employee->id,
-            'work_date' => '2026-11-20',
-            'customer_source' => CustomerSource::FB_AD,
-            'cleaning_price' => 20000,
-        ]));
-        $novA->forceFill(['created_at' => '2026-11-10 09:00:00'])->save();
-
-        $novB = DailySchedule::query()->create($this->scheduleAttributes([
-            'user_id' => $this->employee->id,
-            'work_date' => '2026-11-21',
-            'customer_source' => CustomerSource::FB_AD,
-            'cleaning_price' => 8500,
-        ]));
-        $novB->forceFill(['created_at' => '2026-11-18 11:00:00'])->save();
-
-        $oct = DailySchedule::query()->create($this->scheduleAttributes([
-            'user_id' => $this->employee->id,
-            'work_date' => '2026-10-30',
-            'customer_source' => CustomerSource::FB_AD,
-            'cleaning_price' => 99999,
-        ]));
-        $oct->forceFill(['created_at' => '2026-10-28 09:00:00'])->save();
-
-        $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11&weeks=1')
-            ->assertOk()
-            ->assertJsonPath('data.monthly.year_month', '2026-11')
-            ->assertJsonPath('data.monthly.orders_received', 2)
-            ->assertJsonPath('data.monthly.deal_amount', 28500)
-            ->assertJsonPath('data.monthly.vendor_fee_rate', 0.05)
-            ->assertJsonPath('data.monthly.vendor_fee_amount', 1425);
+        $this->assertSame(1, $weeks->firstWhere('label', '1101-1107')['orders_received']);
+        $this->assertSame(9000, $weeks->firstWhere('label', '1101-1107')['deal_amount']);
+        $this->assertSame(2, $weeks->firstWhere('label', '1108-1114')['orders_received']);
+        $this->assertSame(4500, $weeks->firstWhere('label', '1108-1114')['deal_amount']);
 
         Carbon::setTestNow();
     }
