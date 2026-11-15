@@ -124,4 +124,44 @@ class AdRevenueReportApiTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_ad_revenue_report_monthly_vendor_fee_is_five_percent(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
+        Sanctum::actingAs($this->admin);
+
+        $novA = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-20',
+            'customer_source' => CustomerSource::FB,
+            'cleaning_price' => 20000,
+        ]));
+        $novA->forceFill(['created_at' => '2026-11-10 09:00:00'])->save();
+
+        $novB = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-21',
+            'customer_source' => CustomerSource::FB,
+            'cleaning_price' => 8500,
+        ]));
+        $novB->forceFill(['created_at' => '2026-11-18 11:00:00'])->save();
+
+        $oct = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-10-30',
+            'customer_source' => CustomerSource::FB,
+            'cleaning_price' => 99999,
+        ]));
+        $oct->forceFill(['created_at' => '2026-10-28 09:00:00'])->save();
+
+        $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11&weeks=1')
+            ->assertOk()
+            ->assertJsonPath('data.monthly.year_month', '2026-11')
+            ->assertJsonPath('data.monthly.orders_received', 2)
+            ->assertJsonPath('data.monthly.deal_amount', 28500)
+            ->assertJsonPath('data.monthly.vendor_fee_rate', 0.05)
+            ->assertJsonPath('data.monthly.vendor_fee_amount', 1425);
+
+        Carbon::setTestNow();
+    }
 }
