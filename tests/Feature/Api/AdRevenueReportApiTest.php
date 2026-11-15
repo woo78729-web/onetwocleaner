@@ -44,7 +44,7 @@ class AdRevenueReportApiTest extends TestCase
         ]);
     }
 
-    public function test_ad_revenue_report_summarizes_fb_orders_by_week(): void
+    public function test_ad_revenue_report_only_counts_fb_ad_by_created_at(): void
     {
         Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
         Sanctum::actingAs($this->admin);
@@ -52,7 +52,7 @@ class AdRevenueReportApiTest extends TestCase
         $inWeek = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-20',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 3000,
         ]));
         $inWeek->forceFill(['created_at' => '2026-11-10 09:30:00'])->save();
@@ -60,7 +60,7 @@ class AdRevenueReportApiTest extends TestCase
         $sameWeek = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-21',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 1500,
         ]));
         $sameWeek->forceFill(['created_at' => '2026-11-12 14:00:00'])->save();
@@ -68,10 +68,18 @@ class AdRevenueReportApiTest extends TestCase
         $outWeek = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-12',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 9000,
         ]));
         $outWeek->forceFill(['created_at' => '2026-11-03 09:30:00'])->save();
+
+        // 一般 FB／電聯不應計入廣告收益
+        DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-12',
+            'customer_source' => CustomerSource::FB,
+            'cleaning_price' => 5000,
+        ]))->forceFill(['created_at' => '2026-11-10 10:00:00'])->save();
 
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
@@ -101,30 +109,6 @@ class AdRevenueReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_ad_revenue_report_can_group_by_work_date_week(): void
-    {
-        Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
-        Sanctum::actingAs($this->admin);
-
-        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
-            'user_id' => $this->employee->id,
-            'work_date' => '2026-11-12',
-            'customer_source' => CustomerSource::FB,
-            'cleaning_price' => 4500,
-        ]));
-        $schedule->forceFill(['created_at' => '2026-11-01 08:00:00'])->save();
-
-        $response = $this->getJson('/api/admin/ad-revenue-report?week_start=2026-11-10&basis=work_date&weeks=1')
-            ->assertOk()
-            ->assertJsonPath('data.basis', 'work_date')
-            ->assertJsonCount(1, 'data.weeks');
-
-        $this->assertSame(1, $response->json('data.weeks.0.orders_received'));
-        $this->assertSame(4500, $response->json('data.weeks.0.deal_amount'));
-
-        Carbon::setTestNow();
-    }
-
     public function test_ad_revenue_report_monthly_vendor_fee_is_five_percent(): void
     {
         Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
@@ -133,7 +117,7 @@ class AdRevenueReportApiTest extends TestCase
         $novA = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-20',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 20000,
         ]));
         $novA->forceFill(['created_at' => '2026-11-10 09:00:00'])->save();
@@ -141,7 +125,7 @@ class AdRevenueReportApiTest extends TestCase
         $novB = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-21',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 8500,
         ]));
         $novB->forceFill(['created_at' => '2026-11-18 11:00:00'])->save();
@@ -149,7 +133,7 @@ class AdRevenueReportApiTest extends TestCase
         $oct = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-10-30',
-            'customer_source' => CustomerSource::FB,
+            'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 99999,
         ]));
         $oct->forceFill(['created_at' => '2026-10-28 09:00:00'])->save();
@@ -163,5 +147,25 @@ class AdRevenueReportApiTest extends TestCase
             ->assertJsonPath('data.monthly.vendor_fee_amount', 1425);
 
         Carbon::setTestNow();
+    }
+
+    public function test_schedule_accepts_fb_ad_source(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $this->postJson('/api/admin/schedules', $this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => now()->addDays(3)->toDateString(),
+            'customer_source' => CustomerSource::FB_AD,
+            'fb_display_name' => '廣告客戶',
+            'cleaning_price' => 3000,
+            'ac_units' => 2,
+            'pricing_lines' => [
+                ['ac_units' => 2, 'unit_price' => 1500],
+            ],
+            'task_details' => '2台3000',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.customer_source', 'fb_ad');
     }
 }

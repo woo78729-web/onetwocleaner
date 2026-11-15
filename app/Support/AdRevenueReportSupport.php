@@ -8,22 +8,10 @@ use Illuminate\Support\Collection;
 
 class AdRevenueReportSupport
 {
-    public const BASIS_SCHEDULED_AT = 'scheduled_at';
-
-    public const BASIS_WORK_DATE = 'work_date';
-
     public const DEFAULT_WEEKS = 8;
 
     /** 月結：成交總額 × 比例 = 應付廠商廣告費 */
     public const VENDOR_FEE_RATE = 0.05;
-
-    /**
-     * @return list<string>
-     */
-    public static function bases(): array
-    {
-        return [self::BASIS_SCHEDULED_AT, self::BASIS_WORK_DATE];
-    }
 
     public static function vendorFeeAmount(int $dealAmount): int
     {
@@ -81,7 +69,7 @@ class AdRevenueReportSupport
     }
 
     /**
-     * 依排單時間（或施工日）彙總每週 FB 收單量與成交金額，並附月結廣告費。
+     * 只統計來源＝FB廣告，且一律依打單時間（created_at）切週／月。
      *
      * @return array{
      *   basis: string,
@@ -103,11 +91,9 @@ class AdRevenueReportSupport
      */
     public static function build(
         ?string $weekStart = null,
-        string $basis = self::BASIS_SCHEDULED_AT,
         int $weeks = self::DEFAULT_WEEKS,
         ?string $yearMonth = null,
     ): array {
-        $basis = in_array($basis, self::bases(), true) ? $basis : self::BASIS_SCHEDULED_AT;
         $weeks = max(1, min(52, $weeks));
 
         $latest = self::resolveWeek($weekStart);
@@ -117,29 +103,20 @@ class AdRevenueReportSupport
         $rangeStart = $oldestStart->lt($month['month_start']) ? $oldestStart->copy() : $month['month_start']->copy();
         $rangeEnd = $latest['range_end']->gt($month['month_end']) ? $latest['range_end']->copy() : $month['month_end']->copy();
 
-        $query = DailySchedule::query()
-            ->where('customer_source', CustomerSource::FB)
-            ->select(['id', 'created_at', 'work_date', 'cleaning_price']);
-
-        if ($basis === self::BASIS_WORK_DATE) {
-            $query
-                ->whereDate('work_date', '>=', $rangeStart->toDateString())
-                ->whereDate('work_date', '<=', $rangeEnd->toDateString());
-        } else {
-            $query
-                ->where('created_at', '>=', $rangeStart)
-                ->where('created_at', '<=', $rangeEnd);
-        }
-
         /** @var Collection<int, DailySchedule> $schedules */
-        $schedules = $query->get();
+        $schedules = DailySchedule::query()
+            ->where('customer_source', CustomerSource::FB_AD)
+            ->select(['id', 'created_at', 'work_date', 'cleaning_price'])
+            ->where('created_at', '>=', $rangeStart)
+            ->where('created_at', '<=', $rangeEnd)
+            ->get();
 
         $rows = [];
 
         for ($offset = $weeks - 1; $offset >= 0; $offset--) {
             $weekAnchor = $latest['range_start']->copy()->subWeeks($offset);
             $week = self::resolveWeek($weekAnchor->toDateString());
-            $matched = self::matchSchedules($schedules, $basis, $week['range_start'], $week['range_end'], $week['week_start'], $week['week_end']);
+            $matched = self::matchByCreatedAt($schedules, $week['range_start'], $week['range_end']);
 
             $rows[] = [
                 'week_start' => $week['week_start'],
@@ -150,18 +127,11 @@ class AdRevenueReportSupport
             ];
         }
 
-        $monthlyMatched = self::matchSchedules(
-            $schedules,
-            $basis,
-            $month['month_start'],
-            $month['month_end'],
-            $month['month_start']->toDateString(),
-            $month['month_end']->toDateString(),
-        );
+        $monthlyMatched = self::matchByCreatedAt($schedules, $month['month_start'], $month['month_end']);
         $monthlyDealAmount = (int) $monthlyMatched->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price);
 
         return [
-            'basis' => $basis,
+            'basis' => 'scheduled_at',
             'weeks' => $rows,
             'monthly' => [
                 'year_month' => $month['year_month'],
@@ -177,23 +147,9 @@ class AdRevenueReportSupport
      * @param  Collection<int, DailySchedule>  $schedules
      * @return Collection<int, DailySchedule>
      */
-    private static function matchSchedules(
-        Collection $schedules,
-        string $basis,
-        Carbon $rangeStart,
-        Carbon $rangeEnd,
-        string $dateStart,
-        string $dateEnd,
-    ): Collection {
-        return $schedules->filter(function (DailySchedule $schedule) use ($basis, $rangeStart, $rangeEnd, $dateStart, $dateEnd) {
-            if ($basis === self::BASIS_WORK_DATE) {
-                $workDate = $schedule->work_date?->format('Y-m-d');
-
-                return $workDate !== null
-                    && $workDate >= $dateStart
-                    && $workDate <= $dateEnd;
-            }
-
+    private static function matchByCreatedAt(Collection $schedules, Carbon $rangeStart, Carbon $rangeEnd): Collection
+    {
+        return $schedules->filter(function (DailySchedule $schedule) use ($rangeStart, $rangeEnd) {
             if (! $schedule->created_at) {
                 return false;
             }

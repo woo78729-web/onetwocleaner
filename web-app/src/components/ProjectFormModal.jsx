@@ -121,7 +121,7 @@ export function ProjectFormModal({
 
   const contactIdLabel = form.customer_source === 'line'
     ? 'LINE ID'
-    : form.customer_source === 'fb'
+    : (form.customer_source === 'fb' || form.customer_source === 'fb_ad')
       ? 'FB ID'
       : '聯絡人 ID';
 

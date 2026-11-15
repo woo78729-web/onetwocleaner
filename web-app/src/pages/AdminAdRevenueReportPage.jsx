@@ -46,7 +46,6 @@ function downloadCsv(filename, rows) {
 export default function AdminAdRevenueReportPage() {
   const [anchorWeek, setAnchorWeek] = useState(() => toDateInputValue(startOfWeekSunday()));
   const [yearMonth, setYearMonth] = useState(() => currentYearMonth());
-  const [basis, setBasis] = useState('scheduled_at');
   const [weeksCount, setWeeksCount] = useState(8);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +59,6 @@ export default function AdminAdRevenueReportPage() {
       const result = await api.getAdRevenueReport({
         week_start: anchorWeek,
         year_month: yearMonth,
-        basis,
         weeks: weeksCount,
       });
       setReport(result.data);
@@ -73,7 +71,7 @@ export default function AdminAdRevenueReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [anchorWeek, yearMonth, basis, weeksCount]);
+  }, [anchorWeek, yearMonth, weeksCount]);
 
   useEffect(() => {
     loadReport();
@@ -126,7 +124,7 @@ export default function AdminAdRevenueReportPage() {
           <div>
             <h2 className="card-title">廣告收益回報</h2>
             <p className="hint">
-              依 FB 排單統計每週收單／成交，並以月成交總額計算 {feePercent}% 廠商廣告費。
+              只統計派單來源「FB廣告」，依打單時間（不是施工日）切週／月；月成交總額 × {feePercent}%＝廠商廣告費。
             </p>
           </div>
           <div className="toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -179,20 +177,13 @@ export default function AdminAdRevenueReportPage() {
               <option value={12}>近 12 週</option>
             </select>
           </label>
-          <label className="field">
-            <span className="field-label">統計依據</span>
-            <select value={basis} onChange={(event) => setBasis(event.target.value)}>
-              <option value="scheduled_at">排單時間（建議）</option>
-              <option value="work_date">施工日</option>
-            </select>
-          </label>
         </div>
       </section>
 
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
           <h2 className="card-title">月結廣告費</h2>
-          <p className="hint">月成交總額 × {feePercent}% = 應付廠商廣告費</p>
+          <p className="hint">月成交總額 × {feePercent}% = 應付廠商廣告費（僅 FB廣告）</p>
         </div>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', padding: '0 16px 16px' }}>
           <div className="partner-settlement-hero">
@@ -217,7 +208,7 @@ export default function AdminAdRevenueReportPage() {
       <section className="card table-card">
         <div className="card-header" style={{ padding: '16px 16px 0' }}>
           <h2 className="card-title">成效指標追蹤</h2>
-          <p className="hint">只顯示業主需回報的兩欄：已收單、成交總額。</p>
+          <p className="hint">依打單時間歸週；只計來源「FB廣告」的已收單與成交總額。</p>
         </div>
         <div className="table-wrap">
           {loading ? (

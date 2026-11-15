@@ -251,7 +251,7 @@ export function getScheduleContactId(schedule) {
     return schedule.line_display_name || schedule.customer_name || '';
   }
 
-  if (schedule.customer_source === 'fb') {
+  if (schedule.customer_source === 'fb' || schedule.customer_source === 'fb_ad') {
     return schedule.fb_display_name || schedule.customer_name || '';
   }
 
@@ -263,7 +263,7 @@ export function getFormContactId(form) {
     return form.line_display_name || form.customer_name || '';
   }
 
-  if (form.customer_source === 'fb') {
+  if (form.customer_source === 'fb' || form.customer_source === 'fb_ad') {
     return form.fb_display_name || form.customer_name || '';
   }
 
@@ -277,7 +277,7 @@ export function patchFormContactId(form, value) {
     return { line_display_name: trimmed, customer_name: trimmed };
   }
 
-  if (form.customer_source === 'fb') {
+  if (form.customer_source === 'fb' || form.customer_source === 'fb_ad') {
     return { fb_display_name: trimmed, customer_name: trimmed };
   }
 
@@ -866,6 +866,7 @@ export function patchScheduleForm(form, partial) {
 
 export const CUSTOMER_SOURCE_OPTIONS = [
   { value: 'fb', label: 'FB', color: '#1E88E5' },
+  { value: 'fb_ad', label: 'FB廣告', color: '#4FC3F7' },
   { value: 'line', label: 'LINE', color: '#43A047' },
   { value: 'phone', label: '電聯', color: '#E53935' },
 ];
@@ -1511,6 +1512,11 @@ export function getScheduleBlockColor(schedule) {
       borderColor: '#1565C0',
       textColor: '#ffffff',
     },
+    fb_ad: {
+      backgroundColor: '#4FC3F7',
+      borderColor: '#0288D1',
+      textColor: '#0D47A1',
+    },
     phone: {
       backgroundColor: '#E53935',
       borderColor: '#C62828',
@@ -1529,7 +1535,7 @@ export function getScheduleEventClassName(schedule) {
   }
 
   const source = schedule?.customer_source || 'phone';
-  const sourceClass = (source === 'line' || source === 'fb' || source === 'phone')
+  const sourceClass = (source === 'line' || source === 'fb' || source === 'fb_ad' || source === 'phone')
     ? `rbc-event-source-${source}`
     : 'rbc-event-source-phone';
   const classes = [sourceClass];
