@@ -302,9 +302,12 @@ class DailyAnnouncementSupport
                 ];
             });
 
-        $cancelEvents = ScheduleAnnouncementEvent::query()
+        $announcementEvents = ScheduleAnnouncementEvent::query()
             ->with('actor:id,name')
-            ->where('event_type', ScheduleAnnouncementEvent::TYPE_CANCEL)
+            ->whereIn('event_type', [
+                ScheduleAnnouncementEvent::TYPE_CANCEL,
+                ScheduleAnnouncementEvent::TYPE_DATE_CHANGE,
+            ])
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->orderByDesc('created_at')
             ->limit($limit)
@@ -318,11 +321,15 @@ class DailyAnnouncementSupport
                 $sourceLabel = CustomerSource::label((string) ($event->customer_source ?: CustomerSource::PHONE));
                 $contactName = $event->contact_name ?: '未填名稱';
                 $workDate = $event->work_date?->format('Y-m-d') ?? '未填日期';
+                $previousWorkDate = $event->previous_work_date?->format('Y-m-d') ?? '未填日期';
                 $time = self::formatActivityTime($at, $includeDate);
+                $isDateChange = $event->event_type === ScheduleAnnouncementEvent::TYPE_DATE_CHANGE;
+                $action = $isDateChange ? '調日' : '取消';
                 $detailLine = sprintf(
-                    '%s %s 取消 %s %s %s %s %d台',
+                    '%s %s %s %s %s %s %s %d台',
                     $time,
                     $operator,
+                    $action,
                     $sourceLabel,
                     $technician,
                     $area,
@@ -331,15 +338,17 @@ class DailyAnnouncementSupport
                 );
 
                 return [
-                    'type' => 'cancel',
-                    'id' => ($includeDate ? 'month-cancel-' : 'cancel-').$event->id,
+                    'type' => $isDateChange ? 'date_change' : 'cancel',
+                    'id' => ($includeDate ? 'month-' : '').($isDateChange ? 'date-change-' : 'cancel-').$event->id,
                     'at' => $at->format('Y-m-d H:i'),
                     'time' => $time,
                     'sort_at' => $at->timestamp,
                     'actor' => $operator,
-                    'action' => '取消',
+                    'action' => $action,
                     'title' => $detailLine,
-                    'summary' => sprintf('施工 %s · 原班表 #%s', $workDate, $event->schedule_id ?? '-'),
+                    'summary' => $isDateChange
+                        ? sprintf('原施工 %s → %s · 班表 #%s', $previousWorkDate, $workDate, $event->schedule_id ?? '-')
+                        : sprintf('施工 %s · 原班表 #%s', $workDate, $event->schedule_id ?? '-'),
                     'detail_line' => $detailLine,
                 ];
             });
@@ -347,7 +356,7 @@ class DailyAnnouncementSupport
         /** @var Collection<int, array<string, mixed>> $merged */
         $merged = $scheduleEvents
             ->concat($reportEvents)
-            ->concat($cancelEvents)
+            ->concat($announcementEvents)
             ->sortByDesc('sort_at')
             ->values()
             ->map(function (array $item) {

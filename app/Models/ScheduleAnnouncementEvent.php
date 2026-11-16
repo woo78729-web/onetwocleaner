@@ -9,6 +9,8 @@ class ScheduleAnnouncementEvent extends Model
 {
     public const TYPE_CANCEL = 'cancel';
 
+    public const TYPE_DATE_CHANGE = 'date_change';
+
     protected $fillable = [
         'event_type',
         'schedule_id',
@@ -19,12 +21,14 @@ class ScheduleAnnouncementEvent extends Model
         'service_area',
         'ac_units',
         'work_date',
+        'previous_work_date',
     ];
 
     protected function casts(): array
     {
         return [
             'work_date' => 'date:Y-m-d',
+            'previous_work_date' => 'date:Y-m-d',
             'ac_units' => 'integer',
         ];
     }

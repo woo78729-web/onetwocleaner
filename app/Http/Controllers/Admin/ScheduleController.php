@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DailySchedule;
 use App\Models\User;
 use App\Support\CustomerSource;
+use App\Support\ScheduleAnnouncementSupport;
 use App\Support\ScheduleBackfillSupport;
 use App\Support\ScheduleCustomerServicePolicy;
 use App\Support\ScheduleDeletionSupport;
@@ -209,8 +210,19 @@ class ScheduleController extends Controller
         }
 
         $oldPlannedUnits = (int) $schedule->ac_units;
+        $previousWorkDate = $schedule->work_date?->format('Y-m-d') ?? (string) $schedule->work_date;
         $schedule->fill($validated);
         $schedule->save();
+
+        $newWorkDate = $schedule->work_date?->format('Y-m-d') ?? (string) $schedule->work_date;
+        if ($previousWorkDate !== $newWorkDate) {
+            ScheduleAnnouncementSupport::recordDateChange(
+                $schedule,
+                $previousWorkDate,
+                $newWorkDate,
+                $request->user(),
+            );
+        }
 
         if ($hasReport) {
             $report = $schedule->dailyReport()->first();

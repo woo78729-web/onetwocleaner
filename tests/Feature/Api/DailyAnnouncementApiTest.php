@@ -175,4 +175,40 @@ class DailyAnnouncementApiTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_updating_schedule_date_creates_date_change_announcement(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 15, 17, 5, 0, 'Asia/Taipei'));
+        Sanctum::actingAs($this->admin);
+        $this->admin->forceFill(['name' => '邱泰翔'])->save();
+        $this->employee->forceFill(['name' => '王加和'])->save();
+
+        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'created_by' => $this->admin->id,
+            'work_date' => '2026-11-19',
+            'customer_source' => CustomerSource::FB_AD,
+            'fb_display_name' => 'leo',
+            'service_area' => 'zuoying',
+            'ac_units' => 2,
+            'pricing_lines' => [
+                ['ac_units' => 2, 'unit_price' => 1500],
+            ],
+            'task_details' => '2台3000',
+        ]));
+
+        $this->patchJson('/api/admin/schedules/'.$schedule->id, [
+            'work_date' => '2026-11-22',
+        ])->assertOk();
+
+        $response = $this->getJson('/api/admin/daily-announcement?year_month=2026-11')
+            ->assertOk();
+
+        $dateChange = collect($response->json('data.activity'))->firstWhere('type', 'date_change');
+        $this->assertNotNull($dateChange);
+        $this->assertSame('17:05 邱泰翔 調日 FB廣告 王加和 左營區 leo 2台', $dateChange['detail_line']);
+        $this->assertSame('原施工 2026-11-19 → 2026-11-22 · 班表 #'.$schedule->id, $dateChange['summary']);
+
+        Carbon::setTestNow();
+    }
 }
