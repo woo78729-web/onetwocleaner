@@ -99,9 +99,9 @@ export function DailyAnnouncementModal({
       >
         <div className="modal-header">
           <div>
-            <h2 id="daily-announcement-title" className="modal-title">公告</h2>
+            <h2 id="daily-announcement-title" className="modal-title">代辦事項</h2>
             <p className="hint">
-              {data?.date ? `${data.date} 當日待辦與歷程` : '當日待辦與歷程'}
+              {data?.date ? `${data.date} 待辦與歷程` : '待辦與歷程'}
             </p>
           </div>
           <div className="toolbar" style={{ display: 'flex', gap: 8 }}>

@@ -8,6 +8,11 @@ import { UnitChangeAlertModal } from './UnitChangeAlertModal';
 import { DailyAnnouncementModal } from './DailyAnnouncementModal';
 import { PageLoadingFallback } from './AppStatusScreens';
 import { api } from '../api/client';
+import {
+  getTodoBoardLastSeenFingerprint,
+  hasTodoBoardAlert,
+  markTodoBoardSeen,
+} from '../utils/todoBoard';
 
 const LayoutTitleContext = createContext(null);
 
@@ -172,11 +177,16 @@ function LayoutFrame({ title, children }) {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [todoBoardLastSeenFingerprint, setTodoBoardLastSeenFingerprint] = useState(
+    () => getTodoBoardLastSeenFingerprint(),
+  );
 
   const navStructure = user ? getNavStructure(user) : [];
   const mobileTabItems = user ? getMobileTabItems(user) : [];
   const isAdmin = user?.role === 'admin';
   const canViewAnnouncement = user?.role === 'admin' || user?.role === 'customer_service';
+  const showTodoBoardAlert = canViewAnnouncement
+    && hasTodoBoardAlert(announcementData, todoBoardLastSeenFingerprint);
 
   useEffect(() => {
     if (!user || !isAdmin) {
@@ -232,7 +242,7 @@ function LayoutFrame({ title, children }) {
 
   const loadAnnouncement = useCallback(async (month = announcementMonth) => {
     if (!canViewAnnouncement) {
-      return;
+      return null;
     }
 
     setAnnouncementLoading(true);
@@ -242,12 +252,15 @@ function LayoutFrame({ title, children }) {
       const result = await api.getDailyAnnouncement({
         year_month: month,
       });
-      setAnnouncementData(result.data || null);
-      if (result.data?.monthly?.year_month) {
-        setAnnouncementMonth(result.data.monthly.year_month);
+      const nextData = result.data || null;
+      setAnnouncementData(nextData);
+      if (nextData?.monthly?.year_month) {
+        setAnnouncementMonth(nextData.monthly.year_month);
       }
+      return nextData;
     } catch (err) {
-      setAnnouncementError(err?.message || '公告載入失敗');
+      setAnnouncementError(err?.message || '代辦事項載入失敗');
+      return null;
     } finally {
       setAnnouncementLoading(false);
     }
@@ -280,7 +293,10 @@ function LayoutFrame({ title, children }) {
 
   async function openAnnouncement() {
     setAnnouncementOpen(true);
-    await loadAnnouncement(announcementMonth);
+    const nextData = await loadAnnouncement(announcementMonth);
+    if (nextData) {
+      setTodoBoardLastSeenFingerprint(markTodoBoardSeen(nextData));
+    }
   }
 
   function handleAnnouncementMonthChange(nextMonth) {
@@ -332,15 +348,14 @@ function LayoutFrame({ title, children }) {
               {canViewAnnouncement && (
                 <button
                   type="button"
-                  className="btn btn-glass btn-sm topbar-announcement-btn"
+                  className={`btn btn-glass btn-sm topbar-announcement-btn${showTodoBoardAlert ? ' has-alert' : ''}`}
                   onClick={openAnnouncement}
+                  aria-label={showTodoBoardAlert ? '代辦事項（有新紀錄）' : '代辦事項'}
                 >
-                  公告
-                  {(announcementData?.todos?.total_count || 0) > 0 && (
-                    <span className="topbar-announcement-btn__badge">
-                      {announcementData.todos.total_count}
-                    </span>
+                  {showTodoBoardAlert && (
+                    <span className="topbar-announcement-btn__dot" aria-hidden="true" />
                   )}
+                  代辦事項
                 </button>
               )}
               <span className="user-chip hide-mobile">{user.name}</span>
