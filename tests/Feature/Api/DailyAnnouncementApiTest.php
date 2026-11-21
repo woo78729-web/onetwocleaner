@@ -102,15 +102,15 @@ class DailyAnnouncementApiTest extends TestCase
 
         $dispatch = $activity->firstWhere('type', 'dispatch');
         $this->assertSame('09:15', $dispatch['time']);
-        $this->assertSame('09:15 邱泰翔 派單 FB廣告 王加和 左營區 leo 3台', $dispatch['detail_line']);
+        $this->assertSame('09:15 邱泰翔 派單 FB廣告 王加和 左營區 leo 3台 · 11,000元', $dispatch['detail_line']);
 
         $reportActivity = $activity->firstWhere('type', 'report');
         $this->assertSame('13:40', $reportActivity['time']);
-        $this->assertStringStartsWith('13:40 王加和 回報', $reportActivity['detail_line']);
+        $this->assertStringEndsWith('· 收款 4,500元', $reportActivity['detail_line']);
 
         $monthly = collect($response->json('data.monthly.activity'));
         $monthlyDispatch = $monthly->firstWhere('type', 'dispatch');
-        $this->assertSame('11/15 09:15 邱泰翔 派單 FB廣告 王加和 左營區 leo 3台', $monthlyDispatch['detail_line']);
+        $this->assertSame('11/15 09:15 邱泰翔 派單 FB廣告 王加和 左營區 leo 3台 · 11,000元', $monthlyDispatch['detail_line']);
 
         Carbon::setTestNow();
     }
@@ -170,8 +170,9 @@ class DailyAnnouncementApiTest extends TestCase
 
         $cancel = collect($response->json('data.activity'))->firstWhere('type', 'cancel');
         $this->assertNotNull($cancel);
-        $this->assertSame('16:20 邱泰翔 取消 FB廣告 王加和 左營區 leo 2台', $cancel['detail_line']);
+        $this->assertSame('16:20 邱泰翔 取消 FB廣告 王加和 左營區 leo 2台 · 11,000元', $cancel['detail_line']);
         $this->assertStringContainsString('原班表 #'.$schedule->id, $cancel['summary']);
+        $this->assertStringContainsString('11,000元', $cancel['summary']);
 
         Carbon::setTestNow();
     }
@@ -206,8 +207,8 @@ class DailyAnnouncementApiTest extends TestCase
 
         $dateChange = collect($response->json('data.activity'))->firstWhere('type', 'date_change');
         $this->assertNotNull($dateChange);
-        $this->assertSame('17:05 邱泰翔 調日 FB廣告 王加和 左營區 leo 2台', $dateChange['detail_line']);
-        $this->assertSame('原施工 2026-11-19 → 2026-11-22 · 班表 #'.$schedule->id, $dateChange['summary']);
+        $this->assertSame('17:05 邱泰翔 調日 FB廣告 王加和 左營區 leo 2台 · 3,000元', $dateChange['detail_line']);
+        $this->assertSame('原施工 2026-11-19 → 2026-11-22 · 班表 #'.$schedule->id.' · 3,000元', $dateChange['summary']);
 
         Carbon::setTestNow();
     }

@@ -229,19 +229,21 @@ class DailyAnnouncementSupport
                 $technician = $schedule->user?->name ?: '未指定師傅';
                 $area = self::areaText($schedule->service_area);
                 $units = (int) $schedule->ac_units;
+                $amount = (int) $schedule->cleaning_price;
                 $workDate = $schedule->work_date?->format('Y-m-d') ?? '未填日期';
                 $sourceLabel = CustomerSource::label((string) ($schedule->customer_source ?: CustomerSource::PHONE));
                 $contactName = self::contactDisplayName($schedule);
                 $time = self::formatActivityTime($at, $includeDate);
                 $detailLine = sprintf(
-                    '%s %s 派單 %s %s %s %s %d台',
+                    '%s %s 派單 %s %s %s %s %d台 · %s',
                     $time,
                     $operator,
                     $sourceLabel,
                     $technician,
                     $area,
                     $contactName,
-                    $units
+                    $units,
+                    self::formatAmount($amount)
                 );
 
                 return [
@@ -252,8 +254,9 @@ class DailyAnnouncementSupport
                     'sort_at' => $at->timestamp,
                     'actor' => $operator,
                     'action' => '派單',
+                    'amount' => $amount,
                     'title' => $detailLine,
-                    'summary' => sprintf('施工 %s · 班表 #%d', $workDate, $schedule->id),
+                    'summary' => sprintf('施工 %s · 班表 #%d · %s', $workDate, $schedule->id, self::formatAmount($amount)),
                     'detail_line' => $detailLine,
                 ];
             });
@@ -273,19 +276,21 @@ class DailyAnnouncementSupport
                 $technician = $schedule?->user?->name ?: '未指定師傅';
                 $area = self::areaText($schedule?->service_area);
                 $units = (int) ($report->completed_units ?? $schedule?->ac_units ?? 0);
+                $amount = (int) $report->collected_amount;
                 $sourceLabel = CustomerSource::label((string) ($schedule?->customer_source ?: CustomerSource::PHONE));
                 $contactName = $schedule ? self::contactDisplayName($schedule) : '未填名稱';
                 $workDate = $schedule?->work_date?->format('Y-m-d') ?? '未填日期';
                 $time = self::formatActivityTime($at, $includeDate);
                 $detailLine = sprintf(
-                    '%s %s 回報 %s %s %s %s %d台',
+                    '%s %s 回報 %s %s %s %s %d台 · 收款 %s',
                     $time,
                     $technician,
                     $sourceLabel,
                     $area,
                     $contactName,
                     $workDate,
-                    $units
+                    $units,
+                    self::formatAmount($amount)
                 );
 
                 return [
@@ -296,8 +301,9 @@ class DailyAnnouncementSupport
                     'sort_at' => $at->timestamp,
                     'actor' => $technician,
                     'action' => '回報',
+                    'amount' => $amount,
                     'title' => $detailLine,
-                    'summary' => sprintf('班表 #%s · 收款 %s', $schedule?->id ?? '-', number_format((int) $report->collected_amount)),
+                    'summary' => sprintf('班表 #%s · 收款 %s', $schedule?->id ?? '-', self::formatAmount($amount)),
                     'detail_line' => $detailLine,
                 ];
             });
@@ -318,6 +324,7 @@ class DailyAnnouncementSupport
                 $technician = $event->technician_name ?: '未指定師傅';
                 $area = self::areaText($event->service_area);
                 $units = (int) $event->ac_units;
+                $amount = $event->amount !== null ? (int) $event->amount : null;
                 $sourceLabel = CustomerSource::label((string) ($event->customer_source ?: CustomerSource::PHONE));
                 $contactName = $event->contact_name ?: '未填名稱';
                 $workDate = $event->work_date?->format('Y-m-d') ?? '未填日期';
@@ -336,6 +343,16 @@ class DailyAnnouncementSupport
                     $contactName,
                     $units
                 );
+                if ($amount !== null) {
+                    $detailLine .= ' · '.self::formatAmount($amount);
+                }
+
+                $summary = $isDateChange
+                    ? sprintf('原施工 %s → %s · 班表 #%s', $previousWorkDate, $workDate, $event->schedule_id ?? '-')
+                    : sprintf('施工 %s · 原班表 #%s', $workDate, $event->schedule_id ?? '-');
+                if ($amount !== null) {
+                    $summary .= ' · '.self::formatAmount($amount);
+                }
 
                 return [
                     'type' => $isDateChange ? 'date_change' : 'cancel',
@@ -345,10 +362,9 @@ class DailyAnnouncementSupport
                     'sort_at' => $at->timestamp,
                     'actor' => $operator,
                     'action' => $action,
+                    'amount' => $amount,
                     'title' => $detailLine,
-                    'summary' => $isDateChange
-                        ? sprintf('原施工 %s → %s · 班表 #%s', $previousWorkDate, $workDate, $event->schedule_id ?? '-')
-                        : sprintf('施工 %s · 原班表 #%s', $workDate, $event->schedule_id ?? '-'),
+                    'summary' => $summary,
                     'detail_line' => $detailLine,
                 ];
             });
@@ -375,6 +391,11 @@ class DailyAnnouncementSupport
         }
 
         return $at->format('H:i');
+    }
+
+    private static function formatAmount(int $amount): string
+    {
+        return number_format($amount).'元';
     }
 
     private static function areaText(?string $serviceArea): string

@@ -20,6 +20,7 @@ class ScheduleAnnouncementEvent extends Model
         'contact_name',
         'service_area',
         'ac_units',
+        'amount',
         'work_date',
         'previous_work_date',
     ];
@@ -30,6 +31,7 @@ class ScheduleAnnouncementEvent extends Model
             'work_date' => 'date:Y-m-d',
             'previous_work_date' => 'date:Y-m-d',
             'ac_units' => 'integer',
+            'amount' => 'integer',
         ];
     }
 

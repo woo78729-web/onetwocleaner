@@ -64,6 +64,7 @@ class ScheduleAnnouncementSupport
             'contact_name' => $contactName,
             'service_area' => $schedule->service_area,
             'ac_units' => (int) $schedule->ac_units,
+            'amount' => (int) $schedule->cleaning_price,
             'work_date' => $workDate,
             'previous_work_date' => $previousWorkDate,
         ]);

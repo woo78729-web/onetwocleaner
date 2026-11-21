@@ -296,6 +296,31 @@ a {
   flex-direction: column;
 }
 
+.daily-announcement__filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.daily-announcement__filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.daily-announcement__filter-option {
+  margin: 0;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .daily-announcement__activity-stack {
   display: flex;
   flex-direction: column;
@@ -432,6 +457,10 @@ a {
 
 .daily-announcement__timeline-item.is-cancel {
   border-left: 3px solid #e53935;
+}
+
+.daily-announcement__timeline-item.is-date_change {
+  border-left: 3px solid #fb8c00;
 }
 
 .daily-announcement__time {
