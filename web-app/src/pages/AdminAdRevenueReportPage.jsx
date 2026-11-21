@@ -76,14 +76,14 @@ export default function AdminAdRevenueReportPage() {
     }
 
     downloadCsv(`廣告收益回報_${monthly.year_month}.csv`, [
-      ['日期(周)', '已收單(筆)', '成交總額'],
+      ['日期(周)', '已收單(組)', '成交總額'],
       ...weeks.map((week) => [
         week.label,
         week.orders_received,
         week.deal_amount,
       ]),
       [],
-      ['月結月份', '月收單筆數', '月成交總額', `廠商廣告費(${feePercent}%)`],
+      ['月結月份', '月收單組數', '月成交總額', `廠商廣告費(${feePercent}%)`],
       [
         monthly.year_month,
         monthly.orders_received,
@@ -102,7 +102,7 @@ export default function AdminAdRevenueReportPage() {
           <div>
             <h2 className="card-title">廣告收益回報</h2>
             <p className="hint">
-              只顯示所選月份的 FB廣告週次；已收單以筆數計算，歸週只看進單時間（改施工日不影響），月成交總額 × {feePercent}%＝廠商廣告費。
+              只顯示所選月份的 FB廣告週次；已收單依同名同電話併成一組，歸週只看進單時間（改施工日不影響），月成交總額 × {feePercent}%＝廠商廣告費。
             </p>
           </div>
           <div className="toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -146,7 +146,7 @@ export default function AdminAdRevenueReportPage() {
         </div>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', padding: '0 16px 16px' }}>
           <div className="partner-settlement-hero">
-            <p className="partner-settlement-hero__label">{monthly.year_month} 收單筆數</p>
+            <p className="partner-settlement-hero__label">{monthly.year_month} 收單組數</p>
             <p className="partner-settlement-hero__value">{loading ? '…' : monthly.orders_received}</p>
           </div>
           <div className="partner-settlement-hero">
@@ -167,7 +167,7 @@ export default function AdminAdRevenueReportPage() {
       <section className="card table-card">
         <div className="card-header" style={{ padding: '16px 16px 0' }}>
           <h2 className="card-title">成效指標追蹤</h2>
-          <p className="hint">只列當月週次（週日～週六）；已收單＝筆數，依進單時間歸週。</p>
+          <p className="hint">只列當月週次（週日～週六）；同名同電話算一組，依進單時間歸週。</p>
         </div>
         <div className="table-wrap">
           {loading ? (
@@ -177,7 +177,7 @@ export default function AdminAdRevenueReportPage() {
               <thead>
                 <tr>
                   <th>日期(周)</th>
-                  <th>已收單(筆)</th>
+                  <th>已收單(組)</th>
                   <th>成交總額</th>
                 </tr>
               </thead>

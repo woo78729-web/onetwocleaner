@@ -52,6 +52,8 @@ class AdRevenueReportApiTest extends TestCase
         $weekA = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-20',
+            'customer_name' => '客戶A',
+            'customer_phone' => '0911111111',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 3000,
         ]));
@@ -60,6 +62,8 @@ class AdRevenueReportApiTest extends TestCase
         $weekB = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-21',
+            'customer_name' => '客戶B',
+            'customer_phone' => '0922222222',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 1500,
         ]));
@@ -68,6 +72,8 @@ class AdRevenueReportApiTest extends TestCase
         $earlierInMonth = DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-05',
+            'customer_name' => '客戶C',
+            'customer_phone' => '0933333333',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 9000,
         ]));
@@ -77,6 +83,8 @@ class AdRevenueReportApiTest extends TestCase
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-10-30',
+            'customer_name' => '上月客戶',
+            'customer_phone' => '0944444444',
             'customer_source' => CustomerSource::FB_AD,
             'cleaning_price' => 99999,
         ]))->forceFill(['created_at' => '2026-10-28 09:00:00'])->save();
@@ -85,6 +93,8 @@ class AdRevenueReportApiTest extends TestCase
         DailySchedule::query()->create($this->scheduleAttributes([
             'user_id' => $this->employee->id,
             'work_date' => '2026-11-12',
+            'customer_name' => '一般FB',
+            'customer_phone' => '0955555555',
             'customer_source' => CustomerSource::FB,
             'cleaning_price' => 5000,
         ]))->forceFill(['created_at' => '2026-11-10 10:00:00'])->save();
@@ -164,5 +174,55 @@ class AdRevenueReportApiTest extends TestCase
         ]))
             ->assertCreated()
             ->assertJsonPath('data.customer_source', 'fb_ad');
+    }
+
+    public function test_ad_revenue_groups_same_name_and_phone_as_one_order(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
+        Sanctum::actingAs($this->admin);
+
+        $first = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-12',
+            'customer_name' => '王小明',
+            'customer_phone' => '0912-345-678',
+            'customer_source' => CustomerSource::FB_AD,
+            'cleaning_price' => 3000,
+            'ac_units' => 2,
+        ]));
+        $first->forceFill(['created_at' => '2026-11-10 09:00:00'])->save();
+
+        $second = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-18',
+            'customer_name' => '王 小明',
+            'customer_phone' => '0912345678',
+            'customer_source' => CustomerSource::FB_AD,
+            'cleaning_price' => 1500,
+            'ac_units' => 1,
+        ]));
+        $second->forceFill(['created_at' => '2026-11-12 11:00:00'])->save();
+
+        $other = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-13',
+            'customer_name' => '李太太',
+            'customer_phone' => '0987654321',
+            'customer_source' => CustomerSource::FB_AD,
+            'cleaning_price' => 4500,
+            'ac_units' => 3,
+        ]));
+        $other->forceFill(['created_at' => '2026-11-11 15:00:00'])->save();
+
+        $response = $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11')
+            ->assertOk()
+            ->assertJsonPath('data.monthly.orders_received', 2)
+            ->assertJsonPath('data.monthly.deal_amount', 9000);
+
+        $weeks = collect($response->json('data.weeks'));
+        $this->assertSame(2, $weeks->firstWhere('label', '1108-1114')['orders_received']);
+        $this->assertSame(9000, $weeks->firstWhere('label', '1108-1114')['deal_amount']);
+
+        Carbon::setTestNow();
     }
 }

@@ -66,7 +66,8 @@ class AdRevenueReportSupport
 
     /**
      * 只統計來源＝FB廣告；週次只列當月（週日起日在該月內）。
-     * 「已收單」為筆數（一筆班表＝1），歸週只看進單時間 created_at，改施工日不影響。
+     * 「已收單」依姓名＋電話去重成組；歸週只看進單時間 created_at，改施工日不影響。
+     * 成交總額仍加總各班表金額。
      *
      * @return array{
      *   basis: string,
@@ -93,7 +94,14 @@ class AdRevenueReportSupport
         /** @var Collection<int, DailySchedule> $schedules */
         $schedules = DailySchedule::query()
             ->where('customer_source', CustomerSource::FB_AD)
-            ->select(['id', 'created_at', 'cleaning_price'])
+            ->select([
+                'id',
+                'created_at',
+                'cleaning_price',
+                'customer_name',
+                'customer_phone',
+                'fb_display_name',
+            ])
             ->where('created_at', '>=', $month['month_start'])
             ->where('created_at', '<=', $month['month_end'])
             ->get();
@@ -122,8 +130,7 @@ class AdRevenueReportSupport
                 'week_start' => $week['week_start'],
                 'week_end' => $week['week_end'],
                 'label' => $week['label'],
-                // 筆數：一筆 FB廣告班表算 1，不是台數
-                'orders_received' => $matched->count(),
+                'orders_received' => self::countUniqueGroups($matched),
                 'deal_amount' => (int) $matched->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price),
             ];
 
@@ -137,7 +144,7 @@ class AdRevenueReportSupport
             'weeks' => $rows,
             'monthly' => [
                 'year_month' => $month['year_month'],
-                'orders_received' => $schedules->count(),
+                'orders_received' => self::countUniqueGroups($schedules),
                 'deal_amount' => $monthlyDealAmount,
                 'vendor_fee_rate' => self::VENDOR_FEE_RATE,
                 'vendor_fee_amount' => self::vendorFeeAmount($monthlyDealAmount),
@@ -160,5 +167,43 @@ class AdRevenueReportSupport
 
             return $createdAt->betweenIncluded($rangeStart, $rangeEnd);
         })->values();
+    }
+
+    /**
+     * @param  Collection<int, DailySchedule>  $schedules
+     */
+    private static function countUniqueGroups(Collection $schedules): int
+    {
+        return $schedules
+            ->map(fn (DailySchedule $schedule) => self::groupKey($schedule))
+            ->unique()
+            ->count();
+    }
+
+    public static function groupKey(DailySchedule $schedule): string
+    {
+        $name = self::normalizeName(
+            (string) ($schedule->customer_name ?: ($schedule->fb_display_name ?: ''))
+        );
+        $phone = self::normalizePhone($schedule->customer_phone);
+
+        if ($name === '' && $phone === '') {
+            return 'id:'.$schedule->id;
+        }
+
+        return $name.'|'.$phone;
+    }
+
+    private static function normalizeName(?string $value): string
+    {
+        $name = trim((string) $value);
+        $name = preg_replace('/\s+/u', '', $name) ?? '';
+
+        return mb_strtolower($name);
+    }
+
+    private static function normalizePhone(?string $value): string
+    {
+        return preg_replace('/\D+/', '', (string) $value) ?? '';
     }
 }
