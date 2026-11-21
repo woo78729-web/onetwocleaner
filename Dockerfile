@@ -77,7 +77,8 @@ server {
 EOF
 
 RUN chown -R www-data:www-data /var/www
-COPY --link --chown=www-data:www-data --chmod=755 . /var/www
+# --link 只能用數字 uid/gid；Debian php 映像的 www-data 為 33:33
+COPY --link --chown=33:33 --chmod=755 . /var/www
 
 # .dockerignore 會排除 cache/sessions/views，建置前必須先建立目錄
 RUN set -eux \
