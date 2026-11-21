@@ -67,7 +67,7 @@ class AdRevenueReportSupport
     /**
      * 只統計來源＝FB廣告；週次只列當月（週日起日在該月內）。
      * 「已收單」依姓名＋電話去重成組；歸週只看進單時間 created_at，改施工日不影響。
-     * 成交總額仍加總各班表金額。
+     * 成交總額仍加總各班表金額；items 供點開查帳。
      *
      * @return array{
      *   basis: string,
@@ -76,14 +76,16 @@ class AdRevenueReportSupport
      *     week_end: string,
      *     label: string,
      *     orders_received: int,
-     *     deal_amount: int
+     *     deal_amount: int,
+     *     items: list<array<string, mixed>>
      *   }>,
      *   monthly: array{
      *     year_month: string,
      *     orders_received: int,
      *     deal_amount: int,
      *     vendor_fee_rate: float,
-     *     vendor_fee_amount: int
+     *     vendor_fee_amount: int,
+     *     items: list<array<string, mixed>>
      *   }
      * }
      */
@@ -97,6 +99,7 @@ class AdRevenueReportSupport
             ->select([
                 'id',
                 'created_at',
+                'work_date',
                 'cleaning_price',
                 'customer_name',
                 'customer_phone',
@@ -104,6 +107,7 @@ class AdRevenueReportSupport
             ])
             ->where('created_at', '>=', $month['month_start'])
             ->where('created_at', '<=', $month['month_end'])
+            ->orderBy('created_at')
             ->get();
 
         $rows = [];
@@ -125,18 +129,21 @@ class AdRevenueReportSupport
                 : $week['range_end']->copy();
 
             $matched = self::matchByCreatedAt($schedules, $rangeStart, $rangeEnd);
+            $items = self::buildGroupItems($matched);
 
             $rows[] = [
                 'week_start' => $week['week_start'],
                 'week_end' => $week['week_end'],
                 'label' => $week['label'],
-                'orders_received' => self::countUniqueGroups($matched),
+                'orders_received' => count($items),
                 'deal_amount' => (int) $matched->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price),
+                'items' => $items,
             ];
 
             $cursor->addWeek();
         }
 
+        $monthlyItems = self::buildGroupItems($schedules);
         $monthlyDealAmount = (int) $schedules->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price);
 
         return [
@@ -144,10 +151,11 @@ class AdRevenueReportSupport
             'weeks' => $rows,
             'monthly' => [
                 'year_month' => $month['year_month'],
-                'orders_received' => self::countUniqueGroups($schedules),
+                'orders_received' => count($monthlyItems),
                 'deal_amount' => $monthlyDealAmount,
                 'vendor_fee_rate' => self::VENDOR_FEE_RATE,
                 'vendor_fee_amount' => self::vendorFeeAmount($monthlyDealAmount),
+                'items' => $monthlyItems,
             ],
         ];
     }
@@ -171,13 +179,46 @@ class AdRevenueReportSupport
 
     /**
      * @param  Collection<int, DailySchedule>  $schedules
+     * @return list<array<string, mixed>>
      */
-    private static function countUniqueGroups(Collection $schedules): int
+    private static function buildGroupItems(Collection $schedules): array
     {
+        $timezone = config('app.timezone');
+
         return $schedules
-            ->map(fn (DailySchedule $schedule) => self::groupKey($schedule))
-            ->unique()
-            ->count();
+            ->groupBy(fn (DailySchedule $schedule) => self::groupKey($schedule))
+            ->map(function (Collection $groupSchedules) use ($timezone) {
+                /** @var DailySchedule $first */
+                $first = $groupSchedules->sortBy('created_at')->first();
+                $schedules = $groupSchedules
+                    ->sortBy('created_at')
+                    ->values()
+                    ->map(function (DailySchedule $schedule) use ($timezone) {
+                        $createdAt = Carbon::parse($schedule->created_at)->timezone($timezone);
+
+                        return [
+                            'schedule_id' => $schedule->id,
+                            'intake_at' => $createdAt->format('Y-m-d H:i'),
+                            'intake_date' => $createdAt->toDateString(),
+                            'work_date' => $schedule->work_date?->format('Y-m-d'),
+                            'amount' => (int) $schedule->cleaning_price,
+                        ];
+                    })
+                    ->all();
+
+                return [
+                    'group_key' => self::groupKey($first),
+                    'customer_name' => self::displayName($first),
+                    'customer_phone' => (string) ($first->customer_phone ?: ''),
+                    'schedule_count' => count($schedules),
+                    'deal_amount' => (int) collect($schedules)->sum('amount'),
+                    'first_intake_at' => $schedules[0]['intake_at'] ?? null,
+                    'schedules' => $schedules,
+                ];
+            })
+            ->sortBy('first_intake_at')
+            ->values()
+            ->all();
     }
 
     public static function groupKey(DailySchedule $schedule): string
@@ -192,6 +233,11 @@ class AdRevenueReportSupport
         }
 
         return $name.'|'.$phone;
+    }
+
+    private static function displayName(DailySchedule $schedule): string
+    {
+        return trim((string) ($schedule->customer_name ?: ($schedule->fb_display_name ?: '未填名稱'))) ?: '未填名稱';
     }
 
     private static function normalizeName(?string $value): string

@@ -220,8 +220,20 @@ class AdRevenueReportApiTest extends TestCase
             ->assertJsonPath('data.monthly.deal_amount', 9000);
 
         $weeks = collect($response->json('data.weeks'));
+        $weekItems = collect($weeks->firstWhere('label', '1108-1114')['items']);
         $this->assertSame(2, $weeks->firstWhere('label', '1108-1114')['orders_received']);
         $this->assertSame(9000, $weeks->firstWhere('label', '1108-1114')['deal_amount']);
+        $this->assertCount(2, $weekItems);
+
+        $wang = $weekItems->firstWhere('customer_name', '王小明');
+        $this->assertNotNull($wang);
+        $this->assertSame(2, $wang['schedule_count']);
+        $this->assertSame(4500, $wang['deal_amount']);
+        $this->assertSame('2026-11-10 09:00', $wang['schedules'][0]['intake_at']);
+        $this->assertSame('2026-11-12', $wang['schedules'][0]['work_date']);
+        $this->assertSame($first->id, $wang['schedules'][0]['schedule_id']);
+        $this->assertSame('2026-11-12 11:00', $wang['schedules'][1]['intake_at']);
+        $this->assertSame('2026-11-18', $wang['schedules'][1]['work_date']);
 
         Carbon::setTestNow();
     }

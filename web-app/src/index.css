@@ -2173,6 +2173,25 @@ select option {
   color: var(--brand-800);
 }
 
+.ad-revenue-count-btn {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ad-revenue-count-btn:hover,
+.ad-revenue-count-btn:focus-visible {
+  color: #1565c0;
+}
+
 .partner-settlement-hero--negative .partner-settlement-hero__value {
   color: #ef4444;
 }
