@@ -91,7 +91,7 @@ class AdRevenueReportApiTest extends TestCase
 
         $response = $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11')
             ->assertOk()
-            ->assertJsonPath('data.basis', 'scheduled_at')
+            ->assertJsonPath('data.basis', 'created_at')
             ->assertJsonPath('data.monthly.year_month', '2026-11')
             ->assertJsonPath('data.monthly.orders_received', 3)
             ->assertJsonPath('data.monthly.deal_amount', 13500)
@@ -105,6 +105,43 @@ class AdRevenueReportApiTest extends TestCase
         $this->assertSame(9000, $weeks->firstWhere('label', '1101-1107')['deal_amount']);
         $this->assertSame(2, $weeks->firstWhere('label', '1108-1114')['orders_received']);
         $this->assertSame(4500, $weeks->firstWhere('label', '1108-1114')['deal_amount']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_ad_revenue_counts_deals_not_units_and_ignores_work_date_changes(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 11, 12, 0, 0, 'Asia/Taipei'));
+        Sanctum::actingAs($this->admin);
+
+        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => '2026-11-10',
+            'customer_source' => CustomerSource::FB_AD,
+            'cleaning_price' => 4500,
+            'ac_units' => 3,
+            'pricing_lines' => [
+                ['ac_units' => 3, 'unit_price' => 1500],
+            ],
+            'task_details' => '3台4500',
+        ]));
+        $schedule->forceFill(['created_at' => '2026-11-10 09:30:00'])->save();
+
+        $before = $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11')->assertOk();
+        $beforeWeek = collect($before->json('data.weeks'))->firstWhere('label', '1108-1114');
+        $this->assertSame(1, $beforeWeek['orders_received']);
+        $this->assertSame(4500, $beforeWeek['deal_amount']);
+
+        $this->patchJson('/api/admin/schedules/'.$schedule->id, [
+            'work_date' => '2026-11-25',
+        ])->assertOk();
+
+        $after = $this->getJson('/api/admin/ad-revenue-report?year_month=2026-11')->assertOk();
+        $weeks = collect($after->json('data.weeks'));
+        $this->assertSame(1, $weeks->firstWhere('label', '1108-1114')['orders_received']);
+        $this->assertSame(4500, $weeks->firstWhere('label', '1108-1114')['deal_amount']);
+        $this->assertSame(0, $weeks->firstWhere('label', '1122-1128')['orders_received']);
+        $this->assertSame(1, $after->json('data.monthly.orders_received'));
 
         Carbon::setTestNow();
     }

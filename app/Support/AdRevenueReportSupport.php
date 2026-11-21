@@ -65,7 +65,8 @@ class AdRevenueReportSupport
     }
 
     /**
-     * 只統計來源＝FB廣告；週次只列當月（週日起日在該月內），金額依打單時間。
+     * 只統計來源＝FB廣告；週次只列當月（週日起日在該月內）。
+     * 「已收單」為筆數（一筆班表＝1），歸週只看進單時間 created_at，改施工日不影響。
      *
      * @return array{
      *   basis: string,
@@ -92,7 +93,7 @@ class AdRevenueReportSupport
         /** @var Collection<int, DailySchedule> $schedules */
         $schedules = DailySchedule::query()
             ->where('customer_source', CustomerSource::FB_AD)
-            ->select(['id', 'created_at', 'work_date', 'cleaning_price'])
+            ->select(['id', 'created_at', 'cleaning_price'])
             ->where('created_at', '>=', $month['month_start'])
             ->where('created_at', '<=', $month['month_end'])
             ->get();
@@ -121,6 +122,7 @@ class AdRevenueReportSupport
                 'week_start' => $week['week_start'],
                 'week_end' => $week['week_end'],
                 'label' => $week['label'],
+                // 筆數：一筆 FB廣告班表算 1，不是台數
                 'orders_received' => $matched->count(),
                 'deal_amount' => (int) $matched->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price),
             ];
@@ -131,7 +133,7 @@ class AdRevenueReportSupport
         $monthlyDealAmount = (int) $schedules->sum(fn (DailySchedule $schedule) => (int) $schedule->cleaning_price);
 
         return [
-            'basis' => 'scheduled_at',
+            'basis' => 'created_at',
             'weeks' => $rows,
             'monthly' => [
                 'year_month' => $month['year_month'],
