@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeLeave;
 use App\Models\User;
+use App\Support\EmployeeLeaveReminderSupport;
 use App\Support\SchedulePlanningSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,38 @@ use Illuminate\Validation\Rule;
 
 class LeaveController extends Controller
 {
+    public function reminder(Request $request): JsonResponse
+    {
+        return $this->success(
+            EmployeeLeaveReminderSupport::status($request->user()),
+            '排假提醒查詢成功'
+        );
+    }
+
+    public function acknowledgeReminder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'year_month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+
+        $status = EmployeeLeaveReminderSupport::status($request->user());
+
+        if ($validated['year_month'] !== $status['target_month']) {
+            return $this->error('僅能確認目前開放中的下個月排假', 422);
+        }
+
+        if (! $status['registration_open']) {
+            return $this->error('目前非排假開放時間', 422);
+        }
+
+        EmployeeLeaveReminderSupport::acknowledge($request->user(), $validated['year_month']);
+
+        return $this->success(
+            EmployeeLeaveReminderSupport::status($request->user()),
+            '已確認下個月排假'
+        );
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -66,6 +99,8 @@ class LeaveController extends Controller
                 ->where('leave_type', EmployeeLeave::TYPE_DATE)
                 ->whereDate('leave_date', $validated['leave_date'])
                 ->first();
+
+            EmployeeLeaveReminderSupport::acknowledgeLeaveDate($user, $validated['leave_date']);
 
             return $this->success(
                 $leave ? SchedulePlanningSupport::leavePayload($leave) : null,
@@ -128,6 +163,12 @@ class LeaveController extends Controller
 
         $successCount = count(array_filter($results, fn (array $result) => $result['success']));
         $failureCount = count($results) - $successCount;
+
+        foreach ($validated['changes'] as $change) {
+            if (($change['action'] ?? null) === 'add') {
+                EmployeeLeaveReminderSupport::acknowledgeLeaveDate($user, $change['leave_date']);
+            }
+        }
 
         return $this->success([
             'results' => $results,

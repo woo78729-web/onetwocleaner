@@ -426,6 +426,16 @@ class AcCleaningApi {
     return this.request('GET', '/employee/leaves');
   }
 
+  getEmployeeLeaveReminder() {
+    return this.request('GET', '/employee/leave-reminder');
+  }
+
+  acknowledgeEmployeeLeaveReminder(yearMonth) {
+    return this.request('POST', '/employee/leave-reminder/ack', {
+      body: { year_month: yearMonth },
+    });
+  }
+
   createEmployeeLeave(payload) {
     return this.request('POST', '/employee/leaves', { body: payload });
   }

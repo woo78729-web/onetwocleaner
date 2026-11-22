@@ -7,6 +7,7 @@ import { EmployeeOnboardingRoute } from './components/EmployeeOnboardingRoute';
 import LoginPage from './pages/LoginPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import { RemittanceAlertHost } from './components/RemittanceAlertHost';
+import { EmployeeLeaveReminderHost } from './components/EmployeeLeaveReminderHost';
 import { PersistentLayout } from './components/Layout';
 import { lazyRetry } from './utils/lazyRetry';
 import { preloadAdminHome } from './utils/preloadAdminHome';
@@ -49,6 +50,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/spa'}>
           <RemittanceAlertHost />
+          <EmployeeLeaveReminderHost />
           <Suspense fallback={<RouteLoadingScreen />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

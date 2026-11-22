@@ -217,6 +217,7 @@ export default function EmployeeLeavePage() {
       if (successCount > 0) {
         setMessage(`已確認 ${successCount} 筆排假`);
         setNote('');
+        window.dispatchEvent(new CustomEvent('ac:employee-leave-reminder-refresh'));
       } else if (failures.length === 0) {
         setMessage('沒有變更');
       }
