@@ -2164,8 +2164,7 @@ function isEndTimeAfterStart(startTime, endTime) {
 
 export function validateScheduleForm(form, { userRole = 'admin', original = null } = {}) {
   const messages = [];
-  const hidePricing = userRole === 'customer_service';
-  const canManagePricing = !hidePricing;
+  const canManagePricing = userRole === 'admin' || userRole === 'customer_service';
   const serviceAddresses = normalizeServiceAddresses(form);
   const needsInvoice = Boolean(form.needs_invoice);
 
@@ -2257,13 +2256,6 @@ export function validateScheduleForm(form, { userRole = 'admin', original = null
     });
   }
 
-  if (needsInvoice && !canManagePricing) {
-    const taxId = String(form.invoice_tax_id || '').trim();
-    if (taxId && !/^\d{8}$/.test(taxId)) {
-      messages.push('統一編號須為 8 碼數字');
-    }
-  }
-
   if (serviceAddresses.length > 1) {
     const pricingUnits = getTotalPricingUnits(form);
     const addressUnits = getTotalAddressUnits(serviceAddresses);
@@ -2298,7 +2290,6 @@ export function buildSchedulePayload(form, { original = null, userRole = 'admin'
     throw new Error(timingError);
   }
 
-  const hidePricing = userRole === 'customer_service';
   const synced = syncInvoiceTaxFlags(form);
   const summary = summarizePricingLines(
     synced.pricing_lines,
@@ -2328,7 +2319,7 @@ export function buildSchedulePayload(form, { original = null, userRole = 'admin'
     throw new Error('請填寫有效的冷氣台數');
   }
 
-  if (!hidePricing && pricingLines.some((line) => !UNIT_PRICE_OPTIONS.includes(line.unit_price))) {
+  if (pricingLines.some((line) => !UNIT_PRICE_OPTIONS.includes(line.unit_price))) {
     throw new Error('請選擇有效的單價');
   }
 
