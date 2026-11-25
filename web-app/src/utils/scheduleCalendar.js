@@ -405,22 +405,36 @@ export function parseStationNote(notes) {
   return match ? match[1].trim() : '';
 }
 
+export function parseHouseholdName(notes) {
+  const text = String(notes || '');
+  const match = text.match(/\[戶名\]\s*([^\n\[]+)/);
+
+  return match ? match[1].trim() : '';
+}
+
 export function stripInternalScheduleNotes(notes) {
   return String(notes || '')
     .replace(/\[多址\s+\d+\/\d+(?:·共\d+離\d+)?\]/g, '')
     .replace(/\[站備\]\s*[^\n\[]+/g, '')
+    .replace(/\[戶名\]\s*[^\n\[]+/g, '')
     .trim();
 }
 
-export function composeScheduleNotes(baseNotes, { stationNote = '' } = {}) {
+export function composeScheduleNotes(baseNotes, { stationNote = '', householdName = '' } = {}) {
   const base = String(baseNotes || '')
     .replace(/\[站備\]\s*[^\n\[]+/g, '')
+    .replace(/\[戶名\]\s*[^\n\[]+/g, '')
     .trim();
   const note = String(stationNote || '').trim();
+  const household = String(householdName || '').trim();
   const parts = [];
 
   if (base) {
     parts.push(base);
+  }
+
+  if (household) {
+    parts.push(`[戶名] ${household}`);
   }
 
   if (note) {
@@ -656,12 +670,17 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
     .map((row) => String(row.address || '').trim())
     .filter(Boolean);
 
+  const householdName = synced.show_household_name
+    ? String(synced.household_name || '').trim()
+    : '';
+
   return {
     mode,
     work_date: synced.work_date,
     start_time: synced.start_time,
     end_time: synced.end_time,
     customer_name: synced.customer_name,
+    household_name: householdName,
     customer_address: addressList[0] || synced.customer_address,
     customer_addresses: addressList,
     customer_phone: synced.customer_phone,
@@ -728,6 +747,11 @@ export function buildScheduleSuccessScreenshotRows(summary) {
     { label: '清洗台數', value: formatSuccessSummaryAcUnits(summary), emphasis: true },
     { label: '金額', value: formatSuccessSummaryTotalPrice(summary), emphasis: true },
   ];
+
+  const householdName = String(summary?.household_name || '').trim();
+  if (householdName) {
+    rows.push({ label: '被清洗戶', value: householdName });
+  }
 
   if (addressList.length > 1) {
     addressList.forEach((address, index) => {
@@ -1159,13 +1183,15 @@ export function buildScheduleEventTitle(schedule, options = {}) {
 
 export function buildScheduleCardLine(schedule, { hidePrice = false, relatedSchedules = [] } = {}) {
   const customerName = String(schedule.customer_name || '').trim() || '客';
+  const householdName = parseHouseholdName(schedule?.notes);
   const address = String(schedule.customer_address || '').trim();
   const phone = String(schedule.customer_phone || '').trim().replace(/\s+/g, '');
   const areaLabel = getServiceAreaLabel(schedule.service_area);
   const unitsPrice = buildScheduleUnitsPriceTag(schedule, { hidePrice, relatedSchedules });
   const projectTag = schedule?.cleaning_project_id ? '[專]' : '';
   const areaPrefix = areaLabel && areaLabel !== '未設定' ? `[${areaLabel}]` : '';
-  const parts = [`${projectTag}${areaPrefix}${customerName})${address}`];
+  const householdTag = householdName ? `[戶:${householdName}]` : '';
+  const parts = [`${projectTag}${areaPrefix}${customerName})${householdTag}${address}`];
 
   if (phone) {
     parts.push(phone);
@@ -1839,6 +1865,8 @@ export const emptyScheduleForm = {
   start_time: DEFAULT_FIRST_SHIFT_START,
   end_time: '10:00',
   customer_name: '',
+  show_household_name: false,
+  household_name: '',
   customer_phone: '',
   customer_address: '',
   service_addresses: [createServiceAddress()],
@@ -1875,12 +1903,16 @@ export function scheduleToForm(schedule) {
     schedule,
   );
 
+  const householdName = parseHouseholdName(schedule.notes);
+
   return applyPriceCalculation({
     user_id: String(schedule.user_id),
     work_date: formatDateOnly(schedule.work_date),
     start_time: snapScheduleTime(schedule.start_time),
     end_time: snapScheduleTime(schedule.end_time, '12:00'),
     customer_name: schedule.customer_name || '',
+    show_household_name: Boolean(householdName),
+    household_name: householdName,
     customer_address: schedule.customer_address ?? '',
     customer_phone: schedule.customer_phone ?? '',
     service_addresses: [createServiceAddress({
@@ -2187,6 +2219,10 @@ export function validateScheduleForm(form, { userRole = 'admin', original = null
     messages.push('請填寫清洗聯絡人');
   }
 
+  if (form.show_household_name && !String(form.household_name || '').trim()) {
+    messages.push('已勾選被清洗戶姓名，請填寫貴姓或姓名');
+  }
+
   if (!String(form.customer_phone || '').trim()) {
     messages.push('請填寫清洗電話');
   }
@@ -2375,6 +2411,7 @@ export function buildSchedulePayload(form, { original = null, userRole = 'admin'
       : null,
     notes: composeScheduleNotes(form.notes, {
       stationNote: primaryAddress?.station_note,
+      householdName: form.show_household_name ? form.household_name : '',
     }),
   };
 
@@ -2560,7 +2597,10 @@ export function buildSchedulePayloads(form, options = {}) {
           groupUnits: totalUnits,
           groupPrice: groupPrice,
         }),
-        { stationNote: row.station_note },
+        {
+          stationNote: row.station_note,
+          householdName: form.show_household_name ? form.household_name : '',
+        },
       ),
     }, options));
 

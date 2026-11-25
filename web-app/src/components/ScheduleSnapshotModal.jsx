@@ -10,6 +10,7 @@ import {
   formatScheduleTotalPrice,
   getScheduleBlockColor,
   getSchedulePricingLineDetails,
+  parseHouseholdName,
   parseMultiAddressNote,
   parseStationNote,
   stripInternalScheduleNotes,
@@ -42,6 +43,7 @@ export function ScheduleSnapshotModal({
   ].filter(Boolean).join(' · ');
   const multiAddress = parseMultiAddressNote(schedule.notes);
   const stationNote = parseStationNote(schedule.notes);
+  const householdName = parseHouseholdName(schedule.notes);
   const generalNotes = stripInternalScheduleNotes(schedule.notes);
   const pricingLines = getSchedulePricingLineDetails(schedule);
   const pricingSummary = buildPricingLinesSummaryTag(schedule);
@@ -100,6 +102,12 @@ export function ScheduleSnapshotModal({
               <span className="schedule-popover__label">客戶名稱</span>
               <span className="schedule-popover__value">{schedule.customer_name || '-'}</span>
             </li>
+            {householdName ? (
+              <li>
+                <span className="schedule-popover__label">被清洗戶</span>
+                <span className="schedule-popover__value schedule-popover__value--emphasis">{householdName}</span>
+              </li>
+            ) : null}
             <li>
               <span className="schedule-popover__label">聯絡電話</span>
               <span className="schedule-popover__value">

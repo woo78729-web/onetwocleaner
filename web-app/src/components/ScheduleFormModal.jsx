@@ -14,6 +14,7 @@ import {
   hasInvoicedPricingLine,
   isTriplicateInvoice,
   normalizePricingLines,
+  parseHouseholdName,
   resolveMailContactFields,
   patchFormContactId,
   patchScheduleForm,
@@ -146,10 +147,14 @@ export function ScheduleFormModal({
   }
 
   function applyHistory(schedule) {
+    const householdName = parseHouseholdName(schedule.notes);
+
     handleChange({
       customer_name: schedule.customer_name || form.customer_name,
       customer_phone: schedule.customer_phone || form.customer_phone,
       customer_address: schedule.customer_address || form.customer_address,
+      show_household_name: Boolean(householdName) || form.show_household_name,
+      household_name: householdName || form.household_name,
       service_addresses: [{
         ...(form.service_addresses?.[0] || createServiceAddress()),
         address: schedule.customer_address || form.customer_address,
@@ -608,6 +613,33 @@ export function ScheduleFormModal({
               required
             />
           </label>
+
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
+            <label className="field field-checkbox">
+              <input
+                type="checkbox"
+                checked={Boolean(form.show_household_name)}
+                onChange={(e) => handleChange({
+                  show_household_name: e.target.checked,
+                  household_name: e.target.checked ? form.household_name : '',
+                })}
+              />
+              <span>另填被清洗戶姓名（多人同洗／到府找貴姓時）</span>
+            </label>
+            {form.show_household_name ? (
+              <label className="field" style={{ marginTop: 8 }}>
+                <span className="field-label">被清洗戶姓名</span>
+                <input
+                  className="field-control"
+                  value={form.household_name || ''}
+                  onChange={(e) => handleChange({ household_name: e.target.value })}
+                  placeholder="例：王先生／林小姐（師傅到府詢問用）"
+                  required
+                  maxLength={50}
+                />
+              </label>
+            ) : null}
+          </div>
 
           <div className="field service-addresses" style={{ gridColumn: '1 / -1' }}>
             <div className="service-addresses__header">
