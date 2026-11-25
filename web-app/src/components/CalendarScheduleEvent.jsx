@@ -1,5 +1,5 @@
 import { formatScheduleDisplayTimeRange } from '../utils/scheduleCalendar';
-import { ScheduleTechnicianBadge } from './ScheduleTechnicianBadge';
+import { EmployeeAvatar } from './EmployeeAvatar';
 
 function eventDensityClass(event) {
   const start = event?.start instanceof Date ? event.start.getTime() : 0;
@@ -17,16 +17,22 @@ function eventDensityClass(event) {
   return '';
 }
 
+function technicianName(user) {
+  return user?.name || user?.account || '未指定師傅';
+}
+
 export function CalendarScheduleEvent({ event, view }) {
   const schedule = event.resource;
   const compact = view === 'month';
   const densityClass = eventDensityClass(event);
+  const user = schedule?.user;
+  const name = technicianName(user);
 
   if (schedule?.type === 'leave') {
     if (compact) {
       return (
         <div className="calendar-event-content calendar-event-content--compact">
-          <ScheduleTechnicianBadge user={schedule.user} size="xs" showName={false} />
+          <EmployeeAvatar user={user} size="xs" />
           <span className="calendar-event-content__title">休假</span>
         </div>
       );
@@ -34,14 +40,12 @@ export function CalendarScheduleEvent({ event, view }) {
 
     return (
       <div className={`calendar-event-detail calendar-event-detail--leave ${densityClass}`.trim()}>
-        <ScheduleTechnicianBadge
-          user={schedule.user}
-          size="xs"
-          showName
-          className="calendar-event-detail__technician"
-        />
-        <p className="calendar-event-detail__line">休假</p>
-        <p className="calendar-event-detail__time">{formatScheduleDisplayTimeRange(schedule)}</p>
+        <EmployeeAvatar user={user} size="xs" className="calendar-event-detail__avatar" />
+        <div className="calendar-event-detail__body">
+          <p className="calendar-event-detail__name">{name}</p>
+          <p className="calendar-event-detail__line">休假</p>
+          <p className="calendar-event-detail__time">{formatScheduleDisplayTimeRange(schedule)}</p>
+        </div>
       </div>
     );
   }
@@ -49,9 +53,7 @@ export function CalendarScheduleEvent({ event, view }) {
   if (compact || !schedule) {
     return (
       <div className="calendar-event-content calendar-event-content--compact">
-        {schedule && (
-          <ScheduleTechnicianBadge user={schedule.user} size="xs" showName={false} />
-        )}
+        {schedule ? <EmployeeAvatar user={user} size="xs" /> : null}
         <span className="calendar-event-content__title">{event.title}</span>
       </div>
     );
@@ -59,14 +61,12 @@ export function CalendarScheduleEvent({ event, view }) {
 
   return (
     <div className={`calendar-event-detail ${densityClass}`.trim()} data-schedule-id={schedule.id} title={event.title}>
-      <ScheduleTechnicianBadge
-        user={schedule.user}
-        size="xs"
-        showName
-        className="calendar-event-detail__technician"
-      />
-      <p className="calendar-event-detail__line">{event.title}</p>
-      <p className="calendar-event-detail__time">{formatScheduleDisplayTimeRange(schedule)}</p>
+      <EmployeeAvatar user={user} size="xs" className="calendar-event-detail__avatar" />
+      <div className="calendar-event-detail__body">
+        <p className="calendar-event-detail__name">{name}</p>
+        <p className="calendar-event-detail__line">{event.title}</p>
+        <p className="calendar-event-detail__time">{formatScheduleDisplayTimeRange(schedule)}</p>
+      </div>
     </div>
   );
 }
