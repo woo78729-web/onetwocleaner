@@ -673,6 +673,7 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
   const householdName = synced.show_household_name
     ? String(synced.household_name || '').trim()
     : '';
+  const invoiceConfirm = resolveSuccessInvoiceConfirm(synced, pricing.pricing_lines);
 
   return {
     mode,
@@ -690,6 +691,8 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
     cleaning_price: cleaningPrice,
     unit_price: Number(pricing.unit_price) || Number(synced.unit_price) || 1500,
     pricing_lines: pricing.pricing_lines,
+    invoice_title: invoiceConfirm.invoice_title,
+    invoice_tax_id: invoiceConfirm.invoice_tax_id,
   };
 }
 
@@ -714,6 +717,7 @@ export function buildProjectSuccessSummary(form, employees = [], { mode = 'creat
     .filter(Boolean)
     .join('、') || '-';
   const address = String(form.customer_address || '').trim();
+  const invoiceConfirm = resolveSuccessInvoiceConfirm(synced, pricing.pricing_lines);
 
   return {
     mode,
@@ -731,6 +735,24 @@ export function buildProjectSuccessSummary(form, employees = [], { mode = 'creat
     cleaning_price: Number(pricing.cleaning_price) || Number(form.cleaning_price) || 0,
     unit_price: Number(pricing.unit_price) || Number(form.unit_price) || 1500,
     pricing_lines: pricing.pricing_lines,
+    invoice_title: invoiceConfirm.invoice_title,
+    invoice_tax_id: invoiceConfirm.invoice_tax_id,
+  };
+}
+
+function resolveSuccessInvoiceConfirm(form, pricingLines = []) {
+  const triplicateLine = (pricingLines || []).find(
+    (line) => line?.invoice_type === INVOICE_TYPE_TRIPLICATE,
+  );
+
+  // 僅統編／三聯發票才帶出頭抬與統編給客戶確認
+  if (!triplicateLine && !isTriplicateInvoice(form)) {
+    return { invoice_title: '', invoice_tax_id: '' };
+  }
+
+  return {
+    invoice_title: String(triplicateLine?.invoice_title || form?.invoice_title || '').trim(),
+    invoice_tax_id: String(triplicateLine?.invoice_tax_id || form?.invoice_tax_id || '').trim(),
   };
 }
 
@@ -742,7 +764,7 @@ export function buildScheduleSuccessScreenshotRows(summary) {
     : [];
   const rows = [
     { label: '清洗時間', value: formatScheduleSuccessDateTime(summary) },
-    { label: '清洗人', value: summary?.employee_name || '未指定' },
+    { label: '清洗師傅', value: summary?.employee_name || '未指定' },
     { label: '師傅電話', value: summary?.employee_phone || '-' },
     { label: '清洗台數', value: formatSuccessSummaryAcUnits(summary), emphasis: true },
     { label: '金額', value: formatSuccessSummaryTotalPrice(summary), emphasis: true },
@@ -768,6 +790,17 @@ export function buildScheduleSuccessScreenshotRows(summary) {
   }
 
   rows.push({ label: '客戶電話', value: summary?.customer_phone || '-' });
+
+  const invoiceTitle = String(summary?.invoice_title || '').trim();
+  const invoiceTaxId = String(summary?.invoice_tax_id || '').trim();
+  if (invoiceTitle || invoiceTaxId) {
+    if (invoiceTitle) {
+      rows.push({ label: '發票抬頭', value: invoiceTitle });
+    }
+    if (invoiceTaxId) {
+      rows.push({ label: '統一編號', value: invoiceTaxId });
+    }
+  }
 
   return rows;
 }
