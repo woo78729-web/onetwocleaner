@@ -666,6 +666,7 @@ export function buildScheduleSuccessSummary(form, employees = [], { mode = 'crea
     customer_addresses: addressList,
     customer_phone: synced.customer_phone,
     employee_name: employee?.name || '未指定',
+    employee_phone: String(employee?.phone || '').trim() || '-',
     ac_units: acUnits,
     cleaning_price: cleaningPrice,
     unit_price: Number(pricing.unit_price) || Number(synced.unit_price) || 1500,
@@ -689,6 +690,10 @@ export function buildProjectSuccessSummary(form, employees = [], { mode = 'creat
     .map((item) => String(item.name || '').trim())
     .filter(Boolean)
     .join('、') || '未指定';
+  const employeePhone = selectedEmployees
+    .map((item) => String(item.phone || '').trim())
+    .filter(Boolean)
+    .join('、') || '-';
   const address = String(form.customer_address || '').trim();
 
   return {
@@ -702,6 +707,7 @@ export function buildProjectSuccessSummary(form, employees = [], { mode = 'creat
     customer_addresses: address ? [address] : [],
     customer_phone: form.customer_phone,
     employee_name: employeeName,
+    employee_phone: employeePhone,
     ac_units: Number(pricing.ac_units) || Number(form.ac_units) || 1,
     cleaning_price: Number(pricing.cleaning_price) || Number(form.cleaning_price) || 0,
     unit_price: Number(pricing.unit_price) || Number(form.unit_price) || 1500,
@@ -718,6 +724,7 @@ export function buildScheduleSuccessScreenshotRows(summary) {
   const rows = [
     { label: '清洗時間', value: formatScheduleSuccessDateTime(summary) },
     { label: '清洗人', value: summary?.employee_name || '未指定' },
+    { label: '師傅電話', value: summary?.employee_phone || '-' },
     { label: '清洗台數', value: formatSuccessSummaryAcUnits(summary), emphasis: true },
     { label: '金額', value: formatSuccessSummaryTotalPrice(summary), emphasis: true },
   ];

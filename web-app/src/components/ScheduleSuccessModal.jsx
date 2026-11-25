@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { downloadSuccessCardJpg } from '../utils/captureElement';
+import {
+  downloadSuccessCardJpg,
+  shouldAutoDownloadSuccessCard,
+} from '../utils/captureElement';
 import {
   buildScheduleSuccessScreenshotName,
   buildScheduleSuccessScreenshotRows,
@@ -33,7 +36,9 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
 
       if (!silent || success) {
         setScreenshotHint(success
-          ? '已自動下載截圖，可直接傳給客戶'
+          ? (shouldAutoDownloadSuccessCard()
+            ? '已自動下載截圖，可直接傳給客戶'
+            : '已產生截圖，可分享或下載給客戶')
           : '無法自動下載，請再按一次「下載截圖」');
       }
 
@@ -58,12 +63,18 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       return undefined;
     }
 
+    // 手機自動下載常卡住／被擋，改提示手動按按鈕
+    if (!shouldAutoDownloadSuccessCard()) {
+      setScreenshotHint('手機請按「下載截圖」傳給客戶');
+      downloadButtonRef.current?.focus?.();
+      return undefined;
+    }
+
     const token = captureTokenRef.current + 1;
     captureTokenRef.current = token;
     let cancelled = false;
 
     const run = async () => {
-      // Let the dialog paint, then write the JPG without freezing the page.
       await new Promise((resolve) => {
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(resolve);
@@ -81,7 +92,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
       }
     };
 
-    const timer = window.setTimeout(run, 80);
+    const timer = window.setTimeout(run, 120);
 
     return () => {
       cancelled = true;
@@ -142,6 +153,7 @@ export function ScheduleSuccessModal({ open, summary, onConfirm }) {
             type="button"
             className="btn btn-secondary btn-pill schedule-success-modal__action"
             onClick={onConfirm}
+            disabled={capturing}
           >
             確認
           </button>
