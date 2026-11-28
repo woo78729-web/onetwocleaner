@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PricingLineEditor } from './PricingLineEditor';
 import {
   buildReportPayload,
   calculateEmployeeReportDraft,
+  ensureMismatchPricingLines,
+  syncDraftFromPricingLines,
 } from '../utils/employeeReport';
 
 export function AdminReportEditModal({
@@ -17,7 +20,7 @@ export function AdminReportEditModal({
 
   useEffect(() => {
     if (open && report && schedule) {
-      setDraft({
+      setDraft(ensureMismatchPricingLines(schedule, {
         completed_units: String(report.completed_units ?? schedule.ac_units ?? 1),
         skip_reason: report.skip_reason || '',
         has_tax: Boolean(report.has_tax),
@@ -27,7 +30,7 @@ export function AdminReportEditModal({
         collected_amount: String(report.collected_amount ?? 0),
         paid_to_company: Boolean(report.paid_to_company),
         travel_allowance: String(report.travel_allowance ?? 0),
-      });
+      }));
       setSubmitting(false);
       setError('');
     }
@@ -44,10 +47,16 @@ export function AdminReportEditModal({
 
   function updateDraft(changes) {
     setDraft((prev) => {
-      const nextDraft = { ...prev, ...changes };
+      let nextDraft = { ...prev, ...changes };
+
+      if ('completed_units' in changes) {
+        nextDraft = ensureMismatchPricingLines(schedule, nextDraft);
+      }
+
       const nextCalculated = calculateEmployeeReportDraft(schedule, nextDraft);
 
       if ('completed_units' in changes
+        || 'pricing_lines' in changes
         || 'has_tax' in changes
         || 'needs_invoice_and_mail' in changes
         || 'needs_receipt_and_mail' in changes
@@ -58,6 +67,18 @@ export function AdminReportEditModal({
       }
 
       return nextDraft;
+    });
+  }
+
+  function updatePricingLines(pricingLines) {
+    const nextDraft = syncDraftFromPricingLines(schedule, draft, pricingLines);
+    const nextCalculated = calculateEmployeeReportDraft(schedule, nextDraft);
+
+    setDraft({
+      ...nextDraft,
+      collected_amount: nextDraft.paid_to_company
+        ? '0'
+        : String(nextCalculated.collectedAmount),
     });
   }
 
@@ -118,6 +139,17 @@ export function AdminReportEditModal({
               <span className="field-label">未洗台數</span>
               <input className="field-control" type="number" value={calculated.skippedUnits} readOnly />
             </label>
+          </div>
+
+          <div className="field employee-report-pricing">
+            <span className="field-label">台數與單價（改台數或單台金額都會重算金額與抽成）</span>
+            <PricingLineEditor
+              lines={draft.pricing_lines || calculated.pricingLines}
+              onChange={updatePricingLines}
+              showTax
+              showRemove={false}
+              maxUnits={Math.max(calculated.plannedUnits, calculated.completedUnits, 1)}
+            />
           </div>
 
           {calculated.skippedUnits > 0 && (

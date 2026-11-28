@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\DailySchedule;
 use App\Models\User;
+use App\Support\EmployeeRemittance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -156,6 +157,53 @@ class EmployeeReportApiTest extends TestCase
             ->assertJsonPath('data.completed_units', 1)
             ->assertJsonPath('data.skipped_units', 1)
             ->assertJsonPath('data.unit_mismatch', true);
+    }
+
+    public function test_employee_report_can_change_unit_count_and_unit_price(): void
+    {
+        $workDate = now()->toDateString();
+
+        $schedule = DailySchedule::query()->create($this->scheduleAttributes([
+            'user_id' => $this->employee->id,
+            'work_date' => $workDate,
+            'ac_units' => 3,
+            'unit_price' => 1000,
+            'pricing_lines' => [
+                ['ac_units' => 3, 'unit_price' => 1000],
+            ],
+            'cleaning_price' => 3000,
+            'task_details' => '3台1000=3000',
+        ]));
+
+        Sanctum::actingAs($this->employee);
+
+        $this->postJson('/api/employee/reports', [
+            'schedule_id' => $schedule->id,
+            'completed_units' => 2,
+            'collected_amount' => 2600,
+            'skip_reason' => '現場改成兩台 1300',
+            'pricing_lines' => [
+                ['ac_units' => 2, 'unit_price' => 1300],
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('data.completed_units', 2);
+
+        $schedule->refresh();
+
+        $this->assertSame(2, (int) $schedule->ac_units);
+        $this->assertSame(1300, (int) $schedule->unit_price);
+        $this->assertSame(2600, (int) $schedule->cleaning_price);
+        $this->assertSame(1300, (int) $schedule->pricing_lines[0]['unit_price']);
+
+        $summary = EmployeeRemittance::summarizeReport(
+            $schedule->pricing_lines,
+            2,
+            2,
+            false,
+            false,
+        );
+
+        $this->assertSame(1000, $summary['company_share_due']);
     }
 
     public function test_employee_can_get_tomorrow_schedules(): void

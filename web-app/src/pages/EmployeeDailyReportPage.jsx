@@ -98,30 +98,29 @@ function EmployeeReportForm({
         </label>
       </div>
 
-      {calculated.unitMismatch && (
-        <>
-          <div className="field employee-report-pricing">
-            <span className="field-label">台數異動 — 請確認各項目台數與單價（金額會依此重新計算）</span>
-            <PricingLineEditor
-              lines={draft.pricing_lines || calculated.pricingLines}
-              onChange={updatePricingLines}
-              showTax
-              showRemove={false}
-            />
-          </div>
+      <div className="field employee-report-pricing">
+        <span className="field-label">台數與單價（改台數或單台金額都會重算實收）</span>
+        <PricingLineEditor
+          lines={draft.pricing_lines || calculated.pricingLines}
+          onChange={updatePricingLines}
+          showTax
+          showRemove={false}
+          maxUnits={99}
+        />
+      </div>
 
-          <label className="field">
-            <span className="field-label">台數異動原因</span>
-            <textarea
-              className="field-control"
-              rows={2}
-              value={draft.skip_reason}
-              onChange={(event) => updateDraft({ skip_reason: event.target.value })}
-              placeholder="請說明完成台數與排班不同的原因"
-              required
-            />
-          </label>
-        </>
+      {calculated.unitMismatch && (
+        <label className="field">
+          <span className="field-label">台數異動原因</span>
+          <textarea
+            className="field-control"
+            rows={2}
+            value={draft.skip_reason}
+            onChange={(event) => updateDraft({ skip_reason: event.target.value })}
+            placeholder="請說明完成台數與排班不同的原因"
+            required
+          />
+        </label>
       )}
 
       <label className="field field-checkbox">
